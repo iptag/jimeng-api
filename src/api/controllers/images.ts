@@ -417,8 +417,8 @@ export async function generateImageComposition(
                     large_image_info: {
                       type: "",
                       id: util.uuid(),
-                      height: 2048,
-                      width: 2048,
+                      height: height,
+                      width: width,
                       resolution_type: "2k"
                     },
                     intelligent_ratio: false,
@@ -486,8 +486,8 @@ export async function generateImageComposition(
       data: {
         history_ids: [historyId],
         image_info: {
-          width: 2048,
-          height: 2048,
+          width: height,
+          height: width,
           format: "webp",
           image_scene_list: [
             {

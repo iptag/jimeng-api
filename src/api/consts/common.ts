@@ -71,7 +71,25 @@ export const ASPECT_RATIOS = {
   "9:16": { width: 1440, height: 2560, ratio: 5 },
   "3:2": { width: 2496, height: 1664, ratio: 7 },
   "2:3": { width: 1664, height: 2496, ratio: 6 },
-  "21:9": { width: 3024, height: 1296, ratio: 8 }
+  "21:9": { width: 3024, height: 1296, ratio: 8 },
+
+  "2k@1:1": {width: 2048, height: 2048, ratio: 1},
+  "2k@4:3": {width: 2304, height: 1728, ratio: 4},
+  "2k@3:4": {width: 1728, height: 2304, ratio: 2},
+  "2k@16:9": {width: 2560, height: 1440, ratio: 3},
+  "2k@9:16": {width: 1440, height: 2560, ratio: 5},
+  "2k@3:2": {width: 2496, height: 1664, ratio: 7},
+  "2k@2:3": {width: 1664, height: 2496, ratio: 6},
+  "2k@21:9": {width: 3024, height: 1296, ratio: 8},
+
+  "4k@1:1": {width: 4096, height: 4096, ratio: 101},
+  "4k@4:3": {width: 4608, height: 3456, ratio: 104},
+  "4k@3:4": {width: 3456, height: 4608, ratio: 102},
+  "4k@16:9": {width: 5120, height: 2880, ratio: 103},
+  "4k@9:16": {width: 2880, height: 5120, ratio: 105},
+  "4k@3:2": {width: 4992, height: 3328, ratio: 107},
+  "4k@2:3": {width: 3328, height: 4992, ratio: 106},
+  "4k@21:9": {width: 6048, height: 2592, ratio: 108}
 };
 
 
