@@ -477,7 +477,7 @@ export async function generateVideo(
       },
       data: {
         "extend": {
-          "root_model": end_frame_image ? MODEL_MAP['jimeng-video-3.0'] : model,
+          "root_model": end_frame_image ? VIDEO_MODEL_MAP['jimeng-video-3.0'] : model,
           "m_video_commerce_info": {
             benefit_type: "basic_video_operation_vgfm_v_three",
             resource_id: "generate_video",
