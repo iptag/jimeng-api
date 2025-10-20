@@ -126,7 +126,7 @@ export default {
 
       // 解析尺寸
       const responseFormat = _.defaultTo(response_format, "url");
-      const resultUrls = await generateImageComposition(model, prompt, imageUrls, {
+      const resultUrls = await generateImageComposition(model, prompt, images, {
         ratio,
         resolution,
         sampleStrength,
@@ -147,7 +147,7 @@ export default {
       return {
         created: util.unixTimestamp(),
         data,
-        input_images: imageUrls.length,
+        input_images: images.length,
         composition_type: "multi_image_synthesis",
       };
     },
