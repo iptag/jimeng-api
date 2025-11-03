@@ -2,7 +2,7 @@
 
 [中文文档](README.CN.md)
 
-🎨 **Free AI Image and Video Generation API Service** - Based on reverse engineering of Jimeng AI (China site) and Dreamina (international site), providing an interface format compatible with the OpenAI API.
+🎨 **Free AI Image and Video Generation API Service** - Based on reverse engineering of Jimeng AI (China site) and Dreamina (international site).
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/) [![Docker](https://img.shields.io/badge/Docker-Supported-blue.svg)](https://www.docker.com/) [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 
@@ -12,7 +12,6 @@
 - 🖼️ **Image-to-Image Synthesis**: Supports local images or image URLs.
 - 🎬 **AI Video Generation**: Supports text-to-video generation, and adds local image upload for image-to-video on the China site.
 - 🌐 **International Site Support**: Added support for text-to-image and image-to-image APIs for the Dreamina international site. Please file an issue if you encounter problems.
-- 💬 **Chat Interface**: OpenAI-compatible API for image generation.
 - 🔄 **Smart Polling**: Adaptive polling mechanism to optimize generation efficiency.
 - 🛡️ **Unified Exception Handling**: Comprehensive error handling and retry mechanism.
 - 📊 **Detailed Logs**: Structured logging for easy debugging.
@@ -168,7 +167,7 @@ log_level: info # Log levels: error, warning, info (default), debug
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
-- `response_format` (string, optional): Response format ("url" or "b64_json").
+- `response_format` (string, optional): Response format ("url"(default) or "b64_json").
 
 ```bash
 # Default parameters (ratio: "1:1", resolution: "2k")
@@ -246,7 +245,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
-- `response_format` (string, optional): Response format ("url" or "b64_json").
+- `response_format` (string, optional): Response format ("url"(default) or "b64_json").
 
 **Usage Restrictions**:
 - Number of input images: 1-10
@@ -328,7 +327,7 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 3. **First-Last Frame**: Two images as the first and last frames
 
 > **Mode Detection**: The system automatically determines the generation mode based on the presence of images:
-> - **No images** → Text-to-Video mode (first_frame_image and end_frame_image are undefined)
+> - **No images** → Text-to-Video mode
 > - **1 image** → Image-to-Video mode (only first_frame_image is provided)
 > - **2 images** → First-Last Frame mode (both first_frame_image and end_frame_image are provided)
 
@@ -511,7 +510,7 @@ jimeng-api/
 ```typescript
 export const POLLING_CONFIG = {
   MAX_POLL_COUNT: 900,    // Max polling attempts (15 minutes)
-  POLL_INTERVAL: 1000,    // Base polling interval (1 second)
+  POLL_INTERVAL: 5000,    // Base polling interval (5 second)
   STABLE_ROUNDS: 5,       // Stable rounds
   TIMEOUT_SECONDS: 900    // Timeout (15 minutes)
 };

@@ -1,6 +1,6 @@
 # Jimeng API
 
-🎨 **免费的AI图像和视频生成API服务** - 基于即梦AI（国内站）和dreamina（国际站）的逆向工程实现，提供与OpenAI API兼容的接口格式
+🎨 **免费的AI图像和视频生成API服务** - 基于即梦AI（国内站）和dreamina（国际站）的逆向工程实现。
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/) [![Docker](https://img.shields.io/badge/Docker-支持-blue.svg)](https://www.docker.com/) [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 
@@ -10,7 +10,6 @@
 - 🖼️ **图生图合成**: 支持本地图片或者图片URL
 - 🎬 **AI视频生成**: 支持文本到视频生成，增加国内站图生视频的本地图片上传功能
 - 🌐 **国际站支持**: 新增对即梦国际站（dreamina）文生图以及图生图API的支持，有问题提issue
-- 💬 **聊天接口**: OpenAI生图格式兼容的API
 - 🔄 **智能轮询**: 自适应轮询机制，优化生成效率
 - 🛡️ **统一异常处理**: 完善的错误处理和重试机制
 - 📊 **详细日志**: 结构化日志记录，便于调试
@@ -255,7 +254,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 - `resolution` (string, 可选): 分辨率级别，默认为 `"2k"`。支持的分辨率: `1k`, `2k`, `4k`。
 - `negative_prompt` (string, 可选): 负面提示词
 - `sample_strength` (number, 可选): 采样强度 (0.0-1.0)
-- `response_format` (string, 可选): 响应格式 ("url" 或 "b64_json")
+- `response_format` (string, 可选): 响应格式 ("url"(默认) 或 "b64_json")
 
 **使用限制**:
 - 输入图片数量: 1-10张
@@ -343,7 +342,7 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 3. **首尾帧视频（First-Last Frame）**：使用两张图片分别作为首帧和尾帧
 
 > **模式检测**：系统根据图片的存在情况自动判断生成模式：
-> - **无图片** → 文生视频模式（first_frame_image 和 end_frame_image 均为 undefined）
+> - **无图片** → 文生视频模式
 > - **1张图片** → 图生视频模式（仅提供 first_frame_image）
 > - **2张图片** → 首尾帧视频模式（first_frame_image 和 end_frame_image 均提供）
 
@@ -544,7 +543,7 @@ jimeng-api/
 ```typescript
 export const POLLING_CONFIG = {
   MAX_POLL_COUNT: 900,    // 最大轮询次数 (15分钟)
-  POLL_INTERVAL: 1000,    // 基础轮询间隔 (1秒)
+  POLL_INTERVAL: 5000,    // 基础轮询间隔 (5秒)
   STABLE_ROUNDS: 5,       // 稳定轮次
   TIMEOUT_SECONDS: 900    // 超时时间 (15分钟)
 };
