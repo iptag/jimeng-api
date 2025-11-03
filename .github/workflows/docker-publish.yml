@@ -1,9 +1,6 @@
 name: Docker Publish
 
 on:
-  # Tag push：仅预热缓存，不推镜像
-  push:
-    tags: ['v*.*.*']
   # Release：发布时才推 latest + vX.Y.Z
   release:
     types: [published]
@@ -15,44 +12,7 @@ env:
   IMAGE_NAME: ${{ github.repository }} # 将在步骤中强制转小写
 
 jobs:
-  # 1) Tag push：构建但不推送（预热缓存）
-  build-cache-on-tag:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Force IMAGE_NAME lowercase (GHCR requires lowercase)
-        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-
-      - uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx (pin BuildKit version)
-        uses: docker/setup-buildx-action@v3
-        with:
-          driver-opts: |
-            image=moby/buildkit:v0.25.1
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build (no push, warm cache)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          platforms: linux/amd64,linux/arm64
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  # 2) Release published：推送 latest + vX.Y.Z（同一构建 -> 同 digest）
+  # 1) Release published：推送 latest + vX.Y.Z（同一构建 -> 同 digest）
   build-and-push-on-release:
     if: github.event_name == 'release' && github.event.action == 'published'
     runs-on: ubuntu-latest
@@ -110,7 +70,7 @@ jobs:
             VCS_REF=${{ github.sha }}
             VERSION=${{ steps.version.outputs.VALUE }}
 
-  # 3) 手动触发：自动发现“当前最新的 vX.Y.Z”，一次构建推 latest + vX.Y.Z（同 digest）
+  # 2) 手动触发：自动发现"当前最新的 vX.Y.Z"，一次构建推 latest + vX.Y.Z（同 digest）
   manual-publish-latest:
     if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
