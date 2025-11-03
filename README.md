@@ -100,11 +100,11 @@ npm run build
 npm run dev
 ```
 
-#### Method 3: Docker Deployment
+#### Method 3: Docker Deployment (recommended)
 
 ##### 🚀 Quick Start
 ```bash
-# Using docker-compose (recommended)
+# Using docker-compose
 docker-compose up -d
 
 # Or build and run manually
@@ -134,7 +134,7 @@ docker exec -it jimeng-api sh
 
 ##### 📊 Docker Image Features
 - ✅ **Multi-stage build**: Optimized image size (170MB)
-- ✅ **Non-root user**: Enhanced security (jimeng user)
+- ✅ **Non-root user**: Enhanced security (user:jimeng,)
 - ✅ **Health check**: Automatic service status monitoring
 - ✅ **Unified port**: Uses port 5100 both inside and outside the container
 - ✅ **Log management**: Structured log output
@@ -321,14 +321,23 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 
 **POST** `/v1/videos/generations`
 
-**Function Description**: Generate a video based on a text prompt (Text-to-Video), or combined with input start/end frame images (Image-to-Video).
+**Function Description**: Generate a video based on a text prompt (Text-to-Video), or combined with input start/end frame images (Image-to-Video). Supports three generation modes:
+
+1. **Text-to-Video**: Pure text prompt without any images
+2. **Image-to-Video**: Single image as the first frame
+3. **First-Last Frame**: Two images as the first and last frames
+
+> **Mode Detection**: The system automatically determines the generation mode based on the presence of images:
+> - **No images** → Text-to-Video mode (first_frame_image and end_frame_image are undefined)
+> - **1 image** → Image-to-Video mode (only first_frame_image is provided)
+> - **2 images** → First-Last Frame mode (both first_frame_image and end_frame_image are provided)
 
 **Request Parameters**:
 - `model` (string): The name of the video model to use.
 - `prompt` (string): The text description of the video content.
-- `width` (number, optional): Video width, defaults to `1024`.
-- `height` (number, optional): Video height, defaults to `1024`.
-- `resolution` (string, optional): Video resolution, e.g., `720p`.
+- `ratio` (string, optional): Video aspect ratio, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `21:9`. **Note**: In image-to-video mode (when images are provided), this parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio.
+- `resolution` (string, optional): Video resolution, defaults to `"720p"`. Supported resolutions: `720p`, `1080p`.
+- `duration` (number, optional): Video duration in seconds, defaults to `5`. Supported values: `5` (5 seconds), `10` (10 seconds).
 - `file_paths` (array, optional): An array of image URLs to specify the **start frame** (1st element) and **end frame** (2nd element) of the video.
 - `[file]` (file, optional): Local image files uploaded via `multipart/form-data` (up to 2) to specify the **start frame** and **end frame**. The field name can be arbitrary, e.g., `image1`.
 - `response_format` (string, optional): Response format, supports `url` (default) or `b64_json`.
@@ -337,6 +346,7 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 > - You can provide input images via `file_paths` (URL array) or by directly uploading files.
 > - If both methods are provided, the system will **prioritize the locally uploaded files**.
 > - Up to 2 images are supported, the 1st as the start frame, the 2nd as the end frame.
+> - **Important**: Once image input is provided (image-to-video or first-last frame video), the `ratio` parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio. The `resolution` parameter remains effective.
 
 **Supported Video Models**:
 - `jimeng-video-3.0-pro` - Professional Edition
@@ -347,26 +357,38 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 **Usage Examples**:
 
 ```bash
-# Example 1: Pure text-to-video (using application/json)
+# Example 1: Text-to-Video (0 images) - Pure text generation
 curl -X POST http://localhost:5100/v1/videos/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-video-3.0\", \"prompt\": \"A lion running on the grassland\"}"
+    "{\"model\": \"jimeng-video-3.0\", \"prompt\": \"A lion running on the grassland\", \"ratio\": \"16:9\", \"resolution\": \"1080p\", \"duration\": 10}"
 
-# Example 2: Upload local image as start frame for video generation (using multipart/form-data)
+# Example 2: Image-to-Video (1 image) - Single image as first frame
 curl -X POST http://localhost:5100/v1/videos/generations \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -F "prompt=A man is talking" \
   -F "model=jimeng-video-3.0" \
-  -F "image_file_1=@/path/to/your/local/image.png"
+  -F "ratio=9:16" \
+  -F "duration=5" \
+  -F "image_file_1=@/path/to/your/first-frame.png"
 
-# Example 3: Use network image as start frame for video generation (using application/json)
+# Example 3: First-Last Frame (2 images) - Two images as first and last frames
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  -F "prompt=Smooth transition between scenes" \
+  -F "model=jimeng-video-3.0" \
+  -F "ratio=16:9" \
+  -F "duration=10" \
+  -F "image_file_1=@/path/to/first-frame.png" \
+  -F "image_file_2=@/path/to/last-frame.png"
+
+# Example 4: Image-to-Video with URL image
 curl -X POST http://localhost:5100/v1/videos/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-video-3.0\", \"prompt\": \"A woman dancing in a garden\", \"filePaths\": [\"https://example.com/your-network-image.jpg\"]}"
+    "{\"model\": \"jimeng-video-3.0\", \"prompt\": \"A woman dancing in a garden\", \"ratio\": \"4:3\", \"duration\": 10, \"filePaths\": [\"https://example.com/your-image.jpg\"]}"
 
 ```
 

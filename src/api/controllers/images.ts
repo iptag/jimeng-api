@@ -385,7 +385,7 @@ export async function generateImageComposition(
                       format: "",
                       uri: imageId
                     }],
-                    strength: 0.5
+                    strength: sampleStrength
                   })),
                   prompt_placeholder_info_list: uploadedImageIds.map((_, index) => ({
                     type: "",
@@ -932,6 +932,8 @@ async function generateJimeng40MultiImages(
   if (status === 30) {
     if (failCode === '2038')
       throw new APIException(EX.API_CONTENT_FILTERED);
+    else if (failCode === '1001' || failCode === 1001)
+      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `生成失败，错误代码: ${failCode}。可能原因：文本或图片中包含敏感内容`);
     else
       throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `生成失败，错误代码: ${failCode}`);
   }

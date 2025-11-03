@@ -75,7 +75,7 @@ export default {
 
       const contentType = request.headers['content-type'] || '';
       const isMultiPart = contentType.startsWith('multipart/form-data');
-      
+
       if (isMultiPart) {
         request
           .validate("body.model", v => _.isUndefined(v) || _.isString(v))
@@ -83,7 +83,7 @@ export default {
           .validate("body.negative_prompt", v => _.isUndefined(v) || _.isString(v))
           .validate("body.ratio", v => _.isUndefined(v) || _.isString(v))
           .validate("body.resolution", v => _.isUndefined(v) || _.isString(v))
-          .validate("body.sample_strength", v => _.isUndefined(v) || _.isFinite(v))
+          .validate("body.sample_strength", v => _.isUndefined(v) || (typeof v === 'string' && !isNaN(parseFloat(v))) || _.isFinite(v))
           .validate("body.response_format", v => _.isUndefined(v) || _.isString(v))
           .validate("headers.authorization", _.isString);
       } else {
@@ -134,7 +134,7 @@ export default {
 
       const tokens = tokenSplit(request.headers.authorization);
       const token = _.sample(tokens);
-      
+
       const {
         model,
         prompt,
@@ -145,11 +145,16 @@ export default {
         response_format,
       } = request.body;
 
+      // 如果是 multipart/form-data，需要将字符串转换为数字
+      const finalSampleStrength = isMultiPart && typeof sampleStrength === 'string'
+        ? parseFloat(sampleStrength)
+        : sampleStrength;
+
       const responseFormat = _.defaultTo(response_format, "url");
       const resultUrls = await generateImageComposition(model, prompt, images, {
         ratio,
         resolution,
-        sampleStrength,
+        sampleStrength: finalSampleStrength,
         negativePrompt,
       }, token);
 

@@ -347,7 +347,7 @@ async function uploadImageFromFile(file: any, refreshToken: string): Promise<str
 
 /**
  * 生成视频
- * 
+ *
  * @param _model 模型名称
  * @param prompt 提示词
  * @param options 选项
@@ -358,22 +358,26 @@ export async function generateVideo(
   _model: string,
   prompt: string,
   {
-    width = 1024,
-    height = 1024,
+    ratio = "1:1",
     resolution = "720p",
+    duration = 5,
     filePaths = [],
     files = {},
   }: {
-    width?: number;
-    height?: number;
+    ratio?: string;
     resolution?: string;
+    duration?: number;
     filePaths?: string[];
     files?: any;
   },
   refreshToken: string
 ) {
   const model = getModel(_model);
-  logger.info(`使用模型: ${_model} 映射模型: ${model} ${width}x${height} 分辨率: ${resolution}`);
+
+  // 将秒转换为毫秒，只支持5秒和10秒
+  const durationMs = duration === 10 ? 10000 : 5000;
+
+  logger.info(`使用模型: ${_model} 映射模型: ${model} 比例: ${ratio} 分辨率: ${resolution} 时长: ${duration}s`);
 
   // 检查积分
   const { totalCredit } = await getCredit(refreshToken);
@@ -445,7 +449,7 @@ export async function generateVideo(
     if (uploadIDs[0]) {
       first_frame_image = {
         format: "",
-        height: height,
+        height: 0,
         id: util.uuid(),
         image_uri: uploadIDs[0],
         name: "",
@@ -453,16 +457,16 @@ export async function generateVideo(
         source_from: "upload",
         type: "image",
         uri: uploadIDs[0],
-        width: width,
+        width: 0,
       };
       logger.info(`设置首帧图片: ${uploadIDs[0]}`);
     }
-    
+
     // 构建尾帧图片对象
     if (uploadIDs[1]) {
       end_frame_image = {
         format: "",
-        height: height,
+        height: 0,
         id: util.uuid(),
         image_uri: uploadIDs[1],
         name: "",
@@ -470,7 +474,7 @@ export async function generateVideo(
         source_from: "upload",
         type: "image",
         uri: uploadIDs[1],
-        width: width,
+        width: 0,
       };
       logger.info(`设置尾帧图片: ${uploadIDs[1]}`);
     }
@@ -478,18 +482,28 @@ export async function generateVideo(
 
 
   const componentId = util.uuid();
+  const originSubmitId = util.uuid();
+
+  // 根据官方API的实际行为，所有模式都使用 "first_last_frames"
+  // 通过 first_frame_image 和 end_frame_image 是否为 undefined 来区分模式
+  const functionMode = "first_last_frames";
+
   const metricsExtra = JSON.stringify({
-    "enterFrom": "click",
-    "isDefaultSeed": 1,
     "promptSource": "custom",
+    "isDefaultSeed": 1,
+    "originSubmitId": originSubmitId,
     "isRegenerate": false,
-    "originSubmitId": util.uuid(),
+    "enterFrom": "click",
+    "functionMode": functionMode
   });
-  
-  // 计算视频宽高比
-  const gcd = (a: number, b: number): number => b === 0 ? a : gcd(b, a % b);
-  const divisor = gcd(width, height);
-  const aspectRatio = `${width / divisor}:${height / divisor}`;
+
+  // 当有图片输入时，ratio参数会被图片的实际比例覆盖
+  const hasImageInput = uploadIDs.length > 0;
+  if (hasImageInput && ratio !== "1:1") {
+    logger.warn(`图生视频模式下，ratio参数将被忽略（由输入图片的实际比例决定），但resolution参数仍然有效`);
+  }
+
+  logger.info(`视频生成模式: ${uploadIDs.length}张图片 (首帧: ${!!first_frame_image}, 尾帧: ${!!end_frame_image}), resolution: ${resolution}`);
   
   // 构建请求参数
   const { aigc_data } = await request(
@@ -524,6 +538,7 @@ export async function generateVideo(
           "type": "draft",
           "id": util.uuid(),
           "min_version": "3.0.5",
+          "min_features": [],
           "is_from_tsn": true,
           "version": DRAFT_VERSION,
           "main_component_id": componentId,
@@ -531,16 +546,16 @@ export async function generateVideo(
             "type": "video_base_component",
             "id": componentId,
             "min_version": "1.0.0",
+            "aigc_mode": "workbench",
             "metadata": {
               "type": "",
               "id": util.uuid(),
               "created_platform": 3,
               "created_platform_version": "",
-              "created_time_in_ms": Date.now(),
+              "created_time_in_ms": Date.now().toString(),
               "created_did": ""
             },
             "generate_type": "gen_video",
-            "aigc_mode": "workbench",
             "abilities": {
               "type": "",
               "id": util.uuid(),
@@ -550,26 +565,28 @@ export async function generateVideo(
                 "text_to_video_params": {
                   "type": "",
                   "id": util.uuid(),
-                  "model_req_key": model,
-                  "priority": 0,
-                  "seed": Math.floor(Math.random() * 100000000) + 2500000000,
-                  "video_aspect_ratio": aspectRatio,
                   "video_gen_inputs": [{
-                    duration_ms: 5000,
-                    first_frame_image: first_frame_image,
-                    end_frame_image: end_frame_image,
-                    fps: 24,
-                    id: util.uuid(),
-                    min_version: "3.0.5",
-                    prompt: prompt,
-                    resolution: resolution,
-                    type: "",
-                    video_mode: 2
-                  }]
+                    "type": "",
+                    "id": util.uuid(),
+                    "min_version": "3.0.5",
+                    "prompt": prompt,
+                    "video_mode": 2,
+                    "fps": 24,
+                    "duration_ms": durationMs,
+                    "resolution": resolution,
+                    "first_frame_image": first_frame_image,
+                    "end_frame_image": end_frame_image,
+                    "idip_meta_list": []
+                  }],
+                  "video_aspect_ratio": ratio,
+                  "seed": Math.floor(Math.random() * 100000000) + 2500000000,
+                  "model_req_key": model,
+                  "priority": 0
                 },
                 "video_task_extra": metricsExtra,
               }
-            }
+            },
+            "process_type": 1
           }],
         }),
         http_common_info: {
@@ -694,9 +711,14 @@ export async function generateVideo(
       }
 
       if (status === 30) {
-        const error = failCode === 2038 
-          ? new APIException(EX.API_CONTENT_FILTERED, "内容被过滤")
-          : new APIException(EX.API_IMAGE_GENERATION_FAILED, `生成失败，错误码: ${failCode}`);
+        let error;
+        if (failCode === 2038 || failCode === '2038') {
+          error = new APIException(EX.API_CONTENT_FILTERED, "内容被过滤");
+        } else if (failCode === 1001 || failCode === '1001') {
+          error = new APIException(EX.API_IMAGE_GENERATION_FAILED, `生成失败，错误码: ${failCode}。可能原因：文本或图片中包含敏感内容`);
+        } else {
+          error = new APIException(EX.API_IMAGE_GENERATION_FAILED, `生成失败，错误码: ${failCode}`);
+        }
         // 添加历史ID到错误对象，以便在chat.ts中显示
         error.historyId = historyId;
         throw error;

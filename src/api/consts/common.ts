@@ -26,7 +26,7 @@ export const DEFAULT_IMAGE_MODEL = "jimeng-4.0";
 export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.0";
 
 // 草稿版本
-export const DRAFT_VERSION = "3.3.2";
+export const DRAFT_VERSION = "3.3.3";
 export const DRAFT_MIN_VERSION = "3.0.2";
 
 // 图像模型映射
