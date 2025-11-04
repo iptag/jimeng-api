@@ -965,7 +965,34 @@ async function generateJimeng40MultiImages(
 }
 
 
+export async function generateImageEdits(
+  _model: string,
+  prompt: string,
+  images: (string | Buffer)[],
+  {
+    ratio = '1:1',
+    resolution = '2k',
+    sampleStrength = 0.5,
+    negativePrompt = "",
+  }: {
+    ratio?: string;
+    resolution?: string;
+    sampleStrength?: number;
+    negativePrompt?: string;
+  },
+  refreshToken: string
+) {
+  // 直接调用现有的图像合成功能，因为它们在底层实现上是相同的
+  return await generateImageComposition(_model, prompt, images, {
+    ratio,
+    resolution,
+    sampleStrength,
+    negativePrompt
+  }, refreshToken);
+}
+
 export default {
   generateImages,
   generateImageComposition,
+  generateImageEdits,
 };

@@ -53,3 +53,7 @@ coverage/
 # Temporary folders
 tmp/
 temp/
+
+.spec-workflow/
+CLAUDE.md
+yarn.lock

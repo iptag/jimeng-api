@@ -2,9 +2,60 @@ import fs from "fs";
 import _ from "lodash";
 
 import Request from "@/lib/request/Request.ts";
-import { generateImages, generateImageComposition } from "@/api/controllers/images.ts";
+import { generateImages, generateImageComposition, generateImageEdits } from "@/api/controllers/images.ts";
 import { tokenSplit } from "@/api/controllers/core.ts";
 import util from "@/lib/util.ts";
+
+// OpenAI 参数映射函数
+function mapSizeToRatio(size: string): string {
+  const sizeToRatioMap: { [key: string]: string } = {
+    '1024x1024': '1:1',
+    '1536x1024': '3:2',
+    '1024x1536': '2:3',
+    'auto': '16:9'
+  };
+  return sizeToRatioMap[size] || '1:1';
+}
+
+function mapQualityToResolution(quality: string): string {
+  const qualityToResolutionMap: { [key: string]: string } = {
+    'high': '1k',
+    'medium': '2k',
+    'low': '4k'
+  };
+  return qualityToResolutionMap[quality] || '2k';
+}
+
+function mapOpenAIParamsToInternal(openaiParams: any) {
+  // 处理 negative_prompt 连接到 prompt 末尾
+  let finalPrompt = openaiParams.prompt || '';
+  if (openaiParams.negative_prompt) {
+    finalPrompt = `${finalPrompt} negative_prompt: ${openaiParams.negative_prompt}`;
+  }
+
+  return {
+    model: openaiParams.model,
+    prompt: finalPrompt,
+    images: openaiParams.image || openaiParams.image || [], // 处理 image[] 数组或单个 image
+    ratio: mapSizeToRatio(openaiParams.size || '1024x1024'),
+    resolution: mapQualityToResolution(openaiParams.quality || 'medium'),
+    sampleStrength: openaiParams.sample_strength,
+    responseFormat: openaiParams.response_format || "url"
+  };
+}
+
+function formatOpenAIResponse(resultUrls: string[], responseFormat: string, created: number) {
+  let data = [];
+  if (responseFormat === "b64_json") {
+    // 注意：这里需要异步转换，所以在调用时需要 await
+    return resultUrls.map(url => util.fetchFileBASE64(url)).then(b64Array => 
+      b64Array.map(b64 => ({ b64_json: b64 }))
+    ).then(formattedData => ({ created, data: formattedData }));
+  } else {
+    data = resultUrls.map(url => ({ url }));
+    return Promise.resolve({ created, data });
+  }
+}
 
 export default {
   prefix: "/v1/images",
@@ -175,6 +226,139 @@ export default {
         input_images: images.length,
         composition_type: "multi_image_synthesis",
       };
+    },
+
+    "/edits": async (request: Request) => {
+      // 检查不支持的 OpenAI 参数
+      const unsupportedParams = ['width', 'height'];
+      const bodyKeys = Object.keys(request.body);
+      const foundUnsupported = unsupportedParams.filter(param => bodyKeys.includes(param));
+
+      if (foundUnsupported.length > 0) {
+        throw new Error(`不支持的参数: ${foundUnsupported.join(', ')}。请使用 size 参数控制图像尺寸。`);
+      }
+
+      const contentType = request.headers['content-type'] || '';
+      const isMultiPart = contentType.startsWith('multipart/form-data');
+
+      if (isMultiPart) {
+        // Multipart form data 处理
+        request
+          .validate("body.model", v => _.isUndefined(v) || _.isString(v))
+          .validate("body.prompt", _.isString)
+          .validate("headers.authorization", _.isString);
+
+        // 提取 image[] 数组
+        let images: (string | Buffer)[] = [];
+        const imageFiles = request.files?.image;
+        if (!imageFiles) {
+          throw new Error("缺少必需的 'image' 参数");
+        }
+
+        const imageArray = Array.isArray(imageFiles) ? imageFiles : [imageFiles];
+        if (imageArray.length === 0) {
+          throw new Error("至少需要提供1张图片");
+        }
+
+        images = imageArray.map(file => fs.readFileSync(file.filepath));
+
+        // 获取其他参数
+        const {
+          model,
+          prompt,
+          size,
+          quality,
+          negative_prompt,
+          sample_strength,
+          response_format,
+        } = request.body;
+
+        // 参数映射
+        const internalParams = mapOpenAIParamsToInternal({
+          model,
+          prompt,
+          size,
+          quality,
+          negative_prompt,
+          sample_strength: typeof sample_strength === 'string' ? parseFloat(sample_strength) : sample_strength,
+          response_format,
+          images // 这里传入的 images 实际上不会被使用，因为我们已经有处理过的图片数组
+        });
+
+        const tokens = tokenSplit(request.headers.authorization);
+        const token = _.sample(tokens);
+
+        const responseFormat = internalParams.responseFormat;
+        const resultUrls = await generateImageEdits(internalParams.model, internalParams.prompt, images, {
+          ratio: internalParams.ratio,
+          resolution: internalParams.resolution,
+          sampleStrength: internalParams.sampleStrength,
+          negativePrompt: request.body.negative_prompt || "", // 保持原始 negative_prompt
+        }, token);
+
+        return await formatOpenAIResponse(resultUrls, responseFormat, util.unixTimestamp());
+
+      } else {
+        // JSON 数据处理
+        request
+          .validate("body.model", v => _.isUndefined(v) || _.isString(v))
+          .validate("body.prompt", _.isString)
+          .validate("headers.authorization", _.isString);
+
+        const {
+          model,
+          prompt,
+          image,
+          size,
+          quality,
+          negative_prompt,
+          sample_strength,
+          response_format,
+        } = request.body;
+
+        // 检查 image 参数是否为空或未定义
+        if (_.isUndefined(image)) {
+          throw new Error("缺少必需的 'image' 参数");
+        }
+
+        // 处理 image 参数（支持单个图片或数组）
+        let images: string[] = [];
+        if (Array.isArray(image)) {
+          images = image;
+        } else if (typeof image === 'string') {
+          images = [image];
+        } else {
+          throw new Error("image 参数必须是字符串或字符串数组");
+        }
+
+        if (images.length === 0) {
+          throw new Error("至少需要提供1张图片");
+        }
+
+        // 参数映射
+        const internalParams = mapOpenAIParamsToInternal({
+          model,
+          prompt,
+          size,
+          quality,
+          negative_prompt,
+          sample_strength,
+          response_format
+        });
+
+        const tokens = tokenSplit(request.headers.authorization);
+        const token = _.sample(tokens);
+
+        const responseFormat = internalParams.responseFormat;
+        const resultUrls = await generateImageEdits(internalParams.model, internalParams.prompt, images, {
+          ratio: internalParams.ratio,
+          resolution: internalParams.resolution,
+          sampleStrength: internalParams.sampleStrength,
+          negativePrompt: negative_prompt || "",
+        }, token);
+
+        return await formatOpenAIResponse(resultUrls, responseFormat, util.unixTimestamp());
+      }
     },
   },
 };
