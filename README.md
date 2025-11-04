@@ -46,11 +46,14 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ## 🚀 Quick Start
 
 ### Getting `sessionid`
-- The method for obtaining the `sessionid` is the same for both the domestic site (Jimeng) and the international site (Dreamina), as shown in the image below.
-> **Note 1**: The API endpoints are the same for both domestic and international sites, but for the international site's `sessionid`, you need to manually add the prefix **us-**, for example, `Bearer us-xxxxx`, to access the international site. Otherwise, it defaults to the domestic site.
-> 
-> **Note 2**: Both domestic and international sites now support *text-to-image* and *image-to-image*. The nanobanana model has been added for the international site.
-> 
+- The method for obtaining the `sessionid` is the same for the domestic site (Jimeng), international site (Dreamina), as shown in the image below.
+> **Note 1**: The API endpoints are the same for domestic and international sites, but require different prefixes to distinguish:
+> - **Domestic site**: Use sessionid directly, e.g., `Bearer your_session_id`
+> - **US site**: Add **us-** prefix, e.g., `Bearer us-your_session_id`
+> - **Hong Kong site**: Add **hk-** prefix, e.g., `Bearer hk-your_session_id`
+>
+> **Note 2**: Domestic and international sites now support both *text-to-image* and *image-to-image*. The nanobanana model has been added for the international site.
+>
 > **Note 3**: When using the nanobanana model on the international site, the generated images will be fixed at **1024x1024** and **2k**, consistent with the official settings.
 
 ![](https://github.com/iptag/jimeng-api/blob/main/get_sessionid.png)
@@ -228,8 +231,9 @@ curl -X POST http://localhost:5100/v1/images/generations \
 **Function Description**: Generate a new image based on one or more input images, combined with a text prompt. Supports various creative modes like image blending, style transfer, and content synthesis.
 
 ```bash
-# International version image-to-image example (local file upload)
-# Note "us-your_international_token" below
+# International site image-to-image example (local file upload)
+# US site uses "us-YOUR_SESSION_ID"
+# Hong Kong site uses "hk-YOUR_SESSION_ID"
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer us-YOUR_SESSION_ID" \
   -F "prompt=A cute cat, anime style" \

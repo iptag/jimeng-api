@@ -48,8 +48,11 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ## 🚀 快速开始
 
 ### sessionid获取
-- 国内站 (即梦)和国际站 (dreamina)获取sessionid的方法相同，见下图。
-> **注意1**: 国内站和国际站api接口相同，但国际站的sessionid需要手动添加**us-**，比如`Bearer us-xxxxx`，才能访问国际站，否则默认国内站。
+- 国内站 (即梦)、国际站 (dreamina)获取sessionid的方法相同，见下图。
+> **注意1**: 国内站和国际站接口相同，但需要通过不同的前缀来区分：
+> - **国内站**：直接使用sessionid，如 `Bearer your_session_id`
+> - **美国站**：需要添加 **us-** 前缀，如 `Bearer us-your_session_id`
+> - **香港站**：需要添加 **hk-** 前缀，如 `Bearer hk-your_session_id`
 >
 > **注意2**: 国内站和国际站现已同时支持*文生图*和*图生图*，国际站添加nanobanana模型。
 >
@@ -238,7 +241,8 @@ curl -X POST http://localhost:5100/v1/images/generations \
 
 ```bash
 # 国际版图生图示例 (本地文件上传)
-# 注意下面的 "us-your_international_token"
+# 美国站使用 "us-YOUR_SESSION_ID"
+# 香港站使用 "hk-YOUR_SESSION_ID"
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer us-YOUR_SESSION_ID" \
   -F "prompt=A cute cat, anime style" \

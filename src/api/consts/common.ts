@@ -6,14 +6,17 @@
 export const BASE_URL_CN = "https://jimeng.jianying.com";
 
 export const BASE_URL_US_COMMERCE = "https://commerce.us.capcut.com";
+export const BASE_URL_HK = "https://mweb-api-sg.capcut.com";
 
 // 默认助手ID
 export const DEFAULT_ASSISTANT_ID_CN = 513695;
 export const DEFAULT_ASSISTANT_ID_US = 513641;
+export const DEFAULT_ASSISTANT_ID_HK = 513641;
 
 // 地区
 export const REGION_CN = "cn";
 export const REGION_US = "US";
+export const REGION_HK = "HK";
 
 // 平台代码
 export const PLATFORM_CODE = "7";

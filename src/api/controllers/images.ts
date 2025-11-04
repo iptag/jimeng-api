@@ -7,8 +7,8 @@ import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
-import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_IMAGE_MODEL, DRAFT_VERSION, DRAFT_MIN_VERSION, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US, RESOLUTION_OPTIONS } from "@/api/consts/common.ts";
-import { BASE_URL_DREAMINA_US, BASE_URL_IMAGEX_US, WEB_VERSION as DREAMINA_WEB_VERSION, DA_VERSION as DREAMINA_DA_VERSION, AIGC_FEATURES as DREAMINA_AIGC_FEATURES } from "@/api/consts/dreamina.ts";
+import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_IMAGE_MODEL, DRAFT_VERSION, DRAFT_MIN_VERSION, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US, RESOLUTION_OPTIONS } from "@/api/consts/common.ts";
+import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK, BASE_URL_IMAGEX_US, BASE_URL_IMAGEX_HK, WEB_VERSION as DREAMINA_WEB_VERSION, DA_VERSION as DREAMINA_DA_VERSION, AIGC_FEATURES as DREAMINA_AIGC_FEATURES } from "@/api/consts/dreamina.ts";
 import { createSignature } from "@/lib/aws-signature.ts";
 
 export const DEFAULT_MODEL = DEFAULT_IMAGE_MODEL;
@@ -33,9 +33,9 @@ function getResolutionParams(resolution: string = '2k', ratio: string = '1:1'): 
     resolution_type: resolution,
   };
 }
-export function getModel(model: string, isUS: boolean) {
-  const modelMap = isUS ? IMAGE_MODEL_MAP_US : IMAGE_MODEL_MAP;
-  if (isUS && !modelMap[model]) {
+export function getModel(model: string, isInternational: boolean) {
+  const modelMap = isInternational ? IMAGE_MODEL_MAP_US : IMAGE_MODEL_MAP;
+  if (isInternational && !modelMap[model]) {
     const supportedModels = Object.keys(modelMap).join(', ');
     throw new Error(`国际版不支持模型 "${model}"。支持的模型: ${supportedModels}`);
   }
@@ -60,9 +60,9 @@ function calculateCRC32(buffer: ArrayBuffer): string {
   return ((crc ^ (-1)) >>> 0).toString(16).padStart(8, '0');
 }
 
-async function uploadImageFromUrl(imageUrl: string, refreshToken: string, isUS: boolean): Promise<string> {
+async function uploadImageFromUrl(imageUrl: string, refreshToken: string, isInternational: boolean): Promise<string> {
   try {
-    logger.info(`开始上传图片: ${imageUrl} (isUS: ${isUS})`);
+    logger.info(`开始上传图片: ${imageUrl} (isInternational: ${isInternational})`);
 
     const imageResponse = await fetch(imageUrl);
     if (!imageResponse.ok) {
@@ -70,7 +70,7 @@ async function uploadImageFromUrl(imageUrl: string, refreshToken: string, isUS: 
     }
     const imageBuffer = await imageResponse.arrayBuffer();
 
-    return await uploadImageFromBuffer(Buffer.from(imageBuffer), refreshToken, isUS);
+    return await uploadImageFromBuffer(Buffer.from(imageBuffer), refreshToken, isInternational);
 
   } catch (error) {
     logger.error(`图片上传失败: ${error.message}`);
@@ -78,16 +78,19 @@ async function uploadImageFromUrl(imageUrl: string, refreshToken: string, isUS: 
   }
 }
 
-async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, isUS: boolean): Promise<string> {
+async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, isInternational: boolean): Promise<string> {
   try {
-    logger.info(`开始通过Buffer上传图片... (isUS: ${isUS})`);
+    logger.info(`开始通过Buffer上传图片... (isInternational: ${isInternational})`);
+
+    const isUS = refreshToken.toLowerCase().startsWith('us-');
+    const isHK = refreshToken.toLowerCase().startsWith('hk-');
 
     const tokenResult = await request("post", "/mweb/v1/get_upload_token", refreshToken, {
       data: {
         scene: 2,
       },
-      params: isUS ? {
-        aid: DEFAULT_ASSISTANT_ID_US,
+      params: isInternational ? {
+        aid: isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK,
         web_version: DREAMINA_WEB_VERSION,
         da_version: DREAMINA_DA_VERSION,
         aigc_features: DREAMINA_AIGC_FEATURES,
@@ -96,13 +99,13 @@ async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, 
       },
     });
     const { access_key_id, secret_access_key, session_token } = tokenResult;
-    const service_id = isUS ? tokenResult.space_name : tokenResult.service_id;
+    const service_id = isInternational ? tokenResult.space_name : tokenResult.service_id;
 
     if (!access_key_id || !secret_access_key || !session_token) {
       throw new Error("获取上传令牌失败");
     }
 
-    const actualServiceId = service_id || (isUS ? "wopfjsm1ax" : "tb4s082cfz");
+    const actualServiceId = service_id || (isUS ? "wopfjsm1ax" : isHK ? "wopfjsm1ax" : "tb4s082cfz");
 
     logger.info(`获取上传令牌成功: service_id=${actualServiceId}`);
 
@@ -114,9 +117,9 @@ async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, 
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:\-]/g, '').replace(/\.\d{3}Z$/, 'Z');
     const randomStr = Math.random().toString(36).substring(2, 12);
-    
-    const applyUrlHost = isUS ? BASE_URL_IMAGEX_US : 'https://imagex.bytedanceapi.com';
-    const applyUrl = `${applyUrlHost}/?Action=ApplyImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}&FileSize=${fileSize}&s=${randomStr}${isUS ? '&device_platform=web' : ''}`;
+
+    const applyUrlHost = isUS ? BASE_URL_IMAGEX_US : isHK ? BASE_URL_IMAGEX_HK : 'https://imagex.bytedanceapi.com';
+    const applyUrl = `${applyUrlHost}/?Action=ApplyImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}&FileSize=${fileSize}&s=${randomStr}${isInternational ? '&device_platform=web' : ''}`;
 
     const requestHeaders = {
       'x-amz-date': timestamp,
@@ -125,7 +128,7 @@ async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, 
 
     const authorization = createSignature('GET', applyUrl, requestHeaders, access_key_id, secret_access_key, session_token);
 
-    const origin = isUS ? new URL(BASE_URL_DREAMINA_US).origin : 'https://jimeng.jianying.com';
+    const origin = isUS ? new URL(BASE_URL_DREAMINA_US).origin : isHK ? new URL(BASE_URL_DREAMINA_HK).origin : 'https://jimeng.jianying.com';
 
     const applyResponse = await fetch(applyUrl, {
       method: 'GET',
@@ -247,7 +250,9 @@ export async function generateImageComposition(
   refreshToken: string
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const model = getModel(_model, isUS);
+  const isHK = refreshToken.toLowerCase().startsWith('hk-');
+  const isInternational = isUS || isHK;
+  const model = getModel(_model, isInternational);
   
   let width, height, image_ratio, resolution_type;
 
@@ -283,10 +288,10 @@ export async function generateImageComposition(
       let imageId: string;
       if (typeof image === 'string') {
         logger.info(`正在处理第 ${i + 1}/${imageCount} 张图片 (URL)...`);
-        imageId = await uploadImageFromUrl(image, refreshToken, isUS);
+        imageId = await uploadImageFromUrl(image, refreshToken, isInternational);
       } else {
         logger.info(`正在处理第 ${i + 1}/${imageCount} 张图片 (Buffer)...`);
-        imageId = await uploadImageFromBuffer(image, refreshToken, isUS);
+        imageId = await uploadImageFromBuffer(image, refreshToken, isInternational);
       }
       uploadedImageIds.push(imageId);
       logger.info(`图片 ${i + 1}/${imageCount} 上传成功: ${imageId}`);
@@ -403,7 +408,7 @@ export async function generateImageComposition(
           ],
         }),
         http_common_info: {
-          aid: isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_CN
+          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK) : DEFAULT_ASSISTANT_ID_CN
         }
       },
     }
@@ -521,7 +526,9 @@ export async function generateImages(
   refreshToken: string
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const model = getModel(_model, isUS);
+  const isHK = refreshToken.toLowerCase().startsWith('hk-');
+  const isInternational = isUS || isHK;
+  const model = getModel(_model, isInternational);
   logger.info(`使用模型: ${_model} 映射模型: ${model} 分辨率: ${resolution} 比例: ${ratio} 精细度: ${sampleStrength}`);
 
   return await generateImagesInternal(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt }, refreshToken);
@@ -544,7 +551,9 @@ async function generateImagesInternal(
   refreshToken: string
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const model = getModel(_model, isUS);
+  const isHK = refreshToken.toLowerCase().startsWith('hk-');
+  const isInternational = isUS || isHK;
+  const model = getModel(_model, isInternational);
   
   let width, height, image_ratio, resolution_type;
 
@@ -655,7 +664,7 @@ async function generateImagesInternal(
           ],
         }),
         http_common_info: {
-          aid: isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_CN
+          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK) : DEFAULT_ASSISTANT_ID_CN
         }
       },
     }
@@ -775,7 +784,9 @@ async function generateJimeng40MultiImages(
   refreshToken: string
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const model = getModel(_model, isUS);
+  const isHK = refreshToken.toLowerCase().startsWith('hk-');
+  const isInternational = isUS || isHK;
+  const model = getModel(_model, isInternational);
   const { width, height, image_ratio, resolution_type } = getResolutionParams(resolution, ratio);
 
   const targetImageCount = prompt.match(/(\d+)张/) ? parseInt(prompt.match(/(\d+)张/)[1]) : 4;
@@ -858,7 +869,7 @@ async function generateJimeng40MultiImages(
           ],
         }),
         http_common_info: {
-          aid: isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_CN
+          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK) : DEFAULT_ASSISTANT_ID_CN
         }
       },
     }

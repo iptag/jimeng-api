@@ -10,15 +10,18 @@ import { createParser } from "eventsource-parser";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
 import { JimengErrorHandler, JimengErrorResponse } from "@/lib/error-handler.ts";
-import { BASE_URL_DREAMINA_US } from "@/api/consts/dreamina.ts";
-import { 
+import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK } from "@/api/consts/dreamina.ts";
+import {
   BASE_URL_CN,
   BASE_URL_US_COMMERCE,
+  BASE_URL_HK,
   DEFAULT_ASSISTANT_ID_CN,
   DEFAULT_ASSISTANT_ID_US,
+  DEFAULT_ASSISTANT_ID_HK,
   PLATFORM_CODE,
   REGION_CN,
   REGION_US,
+  REGION_HK,
   VERSION_CODE,
   RETRY_CONFIG
 } from "@/api/consts/common.ts";
@@ -70,11 +73,17 @@ export async function acquireToken(refreshToken: string): Promise<string> {
  */
 export function generateCookie(refreshToken: string) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const token = isUS ? refreshToken.substring(3) : refreshToken;
+  const isHK = refreshToken.toLowerCase().startsWith('hk-');
+  const token = (isUS || isHK) ? refreshToken.substring(3) : refreshToken;
+
+  let storeRegion = 'cn-gd';
+  if (isUS) storeRegion = 'us';
+  else if (isHK) storeRegion = 'hk';
+
   return [
     `_tea_web_id=${WEB_ID}`,
     `is_staff_user=false`,
-    `store-region=${isUS ? 'us' : 'cn-gd'}`,
+    `store-region=${storeRegion}`,
     `store-region-src=uid`,
     `sid_guard=${token}%7C${util.unixTimestamp()}%7C5184000%7CMon%2C+03-Feb-2025+08%3A17%3A09+GMT`,
     `uid_tt=${USER_ID}`,
@@ -137,8 +146,6 @@ export async function receiveCredit(refreshToken: string) {
  * @param params 请求参数
  * @param headers 请求头
  */
-import { BASE_URL_DREAMINA_US } from "@/api/consts/dreamina.ts";
-
 export async function request(
   method: string,
   uri: string,
@@ -146,14 +153,15 @@ export async function request(
   options: AxiosRequestConfig & { noDefaultParams?: boolean } = {}
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const token = await acquireToken(isUS ? refreshToken.substring(3) : refreshToken);
+  const isHK = refreshToken.toLowerCase().startsWith('hk-');
+  const token = await acquireToken((isUS || isHK) ? refreshToken.substring(3) : refreshToken);
   const deviceTime = util.unixTimestamp();
   const sign = util.md5(
     `9e2c|${uri.slice(-7)}|${PLATFORM_CODE}|${VERSION_CODE}|${deviceTime}||11ac`
   );
 
   let baseUrl: string;
-  let aid: string;
+  let aid: number;
   let region: string;
 
   if (isUS) {
@@ -164,7 +172,13 @@ export async function request(
     }
     aid = DEFAULT_ASSISTANT_ID_US;
     region = REGION_US;
-  } else { // 'jimeng' (CN)
+  } else if (isHK) {
+    // HK region uses the SG base URL
+    baseUrl = BASE_URL_DREAMINA_HK;
+    aid = DEFAULT_ASSISTANT_ID_HK;
+    region = REGION_HK;
+  } else {
+    // CN region
     baseUrl = BASE_URL_CN;
     aid = DEFAULT_ASSISTANT_ID_CN;
     region = REGION_CN;
@@ -177,7 +191,7 @@ export async function request(
     aid: aid,
     device_platform: "web",
     region: region,
-    ...(isUS ? {} : { webId: WEB_ID }),
+    ...(isUS || isHK ? {} : { webId: WEB_ID }),
     da_version: "3.3.2",
     web_component_open_flag: 1,
     web_version: "7.5.0",
