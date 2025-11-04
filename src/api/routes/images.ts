@@ -245,7 +245,8 @@ export default {
         // Multipart form data 处理
         request
           .validate("body.model", v => _.isUndefined(v) || _.isString(v))
-          .validate("body.prompt", _.isString)
+          // 允许 prompt 为字符串或字符串数组（部分客户端会重复字段导致解析为数组）
+          .validate("body.prompt", v => _.isString(v) || (_.isArray(v) && v.every(_.isString)))
           .validate("headers.authorization", _.isString);
 
         // 提取 image[] 数组
@@ -273,10 +274,13 @@ export default {
           response_format,
         } = request.body;
 
+        // 规范化 prompt 为字符串
+        const normalizedPrompt = Array.isArray(prompt) ? prompt.join(' ') : prompt;
+
         // 参数映射
         const internalParams = mapOpenAIParamsToInternal({
           model,
-          prompt,
+          prompt: normalizedPrompt,
           size,
           quality,
           negative_prompt,
@@ -302,7 +306,8 @@ export default {
         // JSON 数据处理
         request
           .validate("body.model", v => _.isUndefined(v) || _.isString(v))
-          .validate("body.prompt", _.isString)
+          // 允许 prompt 为字符串或字符串数组
+          .validate("body.prompt", v => _.isString(v) || (_.isArray(v) && v.every(_.isString)))
           .validate("headers.authorization", _.isString);
 
         const {
@@ -315,6 +320,9 @@ export default {
           sample_strength,
           response_format,
         } = request.body;
+
+        // 规范化 prompt 为字符串
+        const normalizedPrompt = Array.isArray(prompt) ? prompt.join(' ') : prompt;
 
         // 检查 image 参数是否为空或未定义
         if (_.isUndefined(image)) {
@@ -338,7 +346,7 @@ export default {
         // 参数映射
         const internalParams = mapOpenAIParamsToInternal({
           model,
-          prompt,
+          prompt: normalizedPrompt,
           size,
           quality,
           negative_prompt,
