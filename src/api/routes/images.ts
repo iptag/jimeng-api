@@ -243,6 +243,12 @@ export default {
 
       if (isMultiPart) {
         // Multipart form data 处理
+        // 兼容部分客户端的 prompt 重复字段或数组情况，先做归一化
+        const rawBody: any = request.body || {};
+        const rawPrompt = rawBody.prompt ?? rawBody['prompt[]'] ?? rawBody['prompt'];
+        if (!_.isUndefined(rawPrompt)) {
+          request.body.prompt = Array.isArray(rawPrompt) ? rawPrompt.filter(_.isString).join(' ') : rawPrompt;
+        }
         request
           .validate("body.model", v => _.isUndefined(v) || _.isString(v))
           // 允许 prompt 为字符串或字符串数组（部分客户端会重复字段导致解析为数组）
@@ -251,17 +257,37 @@ export default {
 
         // 提取 image[] 数组
         let images: (string | Buffer)[] = [];
-        const imageFiles = request.files?.image;
-        if (!imageFiles) {
+        const imageFiles = (request.files && (request.files as any).image)
+          || (request.files && (request.files as any)['image[]'])
+          || (request.files && (request.files as any).images)
+          || (request.files && (request.files as any)['images[]']);
+        if (!imageFiles && false) {
           throw new Error("缺少必需的 'image' 参数");
         }
+        // 回退：当未提供文件字段时，尝试从表单 URL 字段读取图片
+        if (!imageFiles) {
+          const urlField = rawBody.image ?? rawBody['image[]'] ?? rawBody.images ?? rawBody['images[]'];
+          if (_.isUndefined(urlField)) {
+            throw new Error("缺少必需的 'image' 参数（支持上传文件或表单 URL 字段）");
+          }
+          const urlList: any[] = Array.isArray(urlField) ? urlField : [urlField];
+          const strUrls = urlList
+            .map((v) => (typeof v === 'string' ? v : null))
+            .filter((v): v is string => !!v && v.trim().length > 0);
+          if (strUrls.length === 0) {
+            throw new Error("image 参数必须是有效的 URL 字符串或字符串数组");
+          }
+          images = strUrls;
+        }
 
+        if (imageFiles) {
         const imageArray = Array.isArray(imageFiles) ? imageFiles : [imageFiles];
         if (imageArray.length === 0) {
           throw new Error("至少需要提供1张图片");
         }
 
         images = imageArray.map(file => fs.readFileSync(file.filepath));
+        }
 
         // 获取其他参数
         const {
