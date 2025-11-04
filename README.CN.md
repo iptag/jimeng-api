@@ -53,6 +53,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **国内站**：直接使用sessionid，如 `Bearer your_session_id`
 > - **美国站**：需要添加 **us-** 前缀，如 `Bearer us-your_session_id`
 > - **香港站**：需要添加 **hk-** 前缀，如 `Bearer hk-your_session_id`
+> - **日本站**：需要添加 **jp-** 前缀，如 `Bearer jp-your_session_id`
 >
 > **注意2**: 国内站和国际站现已同时支持*文生图*和*图生图*，国际站添加nanobanana模型。
 >
@@ -243,6 +244,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 # 国际版图生图示例 (本地文件上传)
 # 美国站使用 "us-YOUR_SESSION_ID"
 # 香港站使用 "hk-YOUR_SESSION_ID"
+# 日本站使用 "jp-YOUR_SESSION_ID"
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer us-YOUR_SESSION_ID" \
   -F "prompt=A cute cat, anime style" \

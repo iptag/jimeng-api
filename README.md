@@ -51,6 +51,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **Domestic site**: Use sessionid directly, e.g., `Bearer your_session_id`
 > - **US site**: Add **us-** prefix, e.g., `Bearer us-your_session_id`
 > - **Hong Kong site**: Add **hk-** prefix, e.g., `Bearer hk-your_session_id`
+> - **Japan site**: Add **jp-** prefix, e.g., `Bearer jp-your_session_id`
 >
 > **Note 2**: Domestic and international sites now support both *text-to-image* and *image-to-image*. The nanobanana model has been added for the international site.
 >
@@ -234,6 +235,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 # International site image-to-image example (local file upload)
 # US site uses "us-YOUR_SESSION_ID"
 # Hong Kong site uses "hk-YOUR_SESSION_ID"
+# Japan site uses "jp-YOUR_SESSION_ID"
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer us-YOUR_SESSION_ID" \
   -F "prompt=A cute cat, anime style" \

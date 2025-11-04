@@ -7,7 +7,7 @@ import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
-import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_IMAGE_MODEL, DRAFT_VERSION, DRAFT_MIN_VERSION, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US, RESOLUTION_OPTIONS } from "@/api/consts/common.ts";
+import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_IMAGE_MODEL, DRAFT_VERSION, DRAFT_MIN_VERSION, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US, RESOLUTION_OPTIONS } from "@/api/consts/common.ts";
 import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK, BASE_URL_IMAGEX_US, BASE_URL_IMAGEX_HK, WEB_VERSION as DREAMINA_WEB_VERSION, DA_VERSION as DREAMINA_DA_VERSION, AIGC_FEATURES as DREAMINA_AIGC_FEATURES } from "@/api/consts/dreamina.ts";
 import { createSignature } from "@/lib/aws-signature.ts";
 
@@ -84,13 +84,14 @@ async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, 
 
     const isUS = refreshToken.toLowerCase().startsWith('us-');
     const isHK = refreshToken.toLowerCase().startsWith('hk-');
+    const isJP = refreshToken.toLowerCase().startsWith('jp-');
 
     const tokenResult = await request("post", "/mweb/v1/get_upload_token", refreshToken, {
       data: {
         scene: 2,
       },
       params: isInternational ? {
-        aid: isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK,
+        aid: isUS ? DEFAULT_ASSISTANT_ID_US : (isJP ? DEFAULT_ASSISTANT_ID_JP : DEFAULT_ASSISTANT_ID_HK),
         web_version: DREAMINA_WEB_VERSION,
         da_version: DREAMINA_DA_VERSION,
         aigc_features: DREAMINA_AIGC_FEATURES,
@@ -105,7 +106,7 @@ async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, 
       throw new Error("获取上传令牌失败");
     }
 
-    const actualServiceId = service_id || (isUS ? "wopfjsm1ax" : isHK ? "wopfjsm1ax" : "tb4s082cfz");
+    const actualServiceId = service_id || (isUS ? "wopfjsm1ax" : (isHK || isJP) ? "wopfjsm1ax" : "tb4s082cfz");
 
     logger.info(`获取上传令牌成功: service_id=${actualServiceId}`);
 
@@ -118,7 +119,7 @@ async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, 
     const timestamp = now.toISOString().replace(/[:\-]/g, '').replace(/\.\d{3}Z$/, 'Z');
     const randomStr = Math.random().toString(36).substring(2, 12);
 
-    const applyUrlHost = isUS ? BASE_URL_IMAGEX_US : isHK ? BASE_URL_IMAGEX_HK : 'https://imagex.bytedanceapi.com';
+    const applyUrlHost = isUS ? BASE_URL_IMAGEX_US : (isHK || isJP) ? BASE_URL_IMAGEX_HK : 'https://imagex.bytedanceapi.com';
     const applyUrl = `${applyUrlHost}/?Action=ApplyImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}&FileSize=${fileSize}&s=${randomStr}${isInternational ? '&device_platform=web' : ''}`;
 
     const requestHeaders = {
@@ -128,7 +129,7 @@ async function uploadImageFromBuffer(imageBuffer: Buffer, refreshToken: string, 
 
     const authorization = createSignature('GET', applyUrl, requestHeaders, access_key_id, secret_access_key, session_token);
 
-    const origin = isUS ? new URL(BASE_URL_DREAMINA_US).origin : isHK ? new URL(BASE_URL_DREAMINA_HK).origin : 'https://jimeng.jianying.com';
+    const origin = isUS ? new URL(BASE_URL_DREAMINA_US).origin : (isHK || isJP) ? new URL(BASE_URL_DREAMINA_HK).origin : 'https://jimeng.jianying.com';
 
     const applyResponse = await fetch(applyUrl, {
       method: 'GET',
@@ -251,7 +252,8 @@ export async function generateImageComposition(
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
   const isHK = refreshToken.toLowerCase().startsWith('hk-');
-  const isInternational = isUS || isHK;
+  const isJP = refreshToken.toLowerCase().startsWith('jp-');
+  const isInternational = isUS || isHK || isJP;
   const model = getModel(_model, isInternational);
   
   let width, height, image_ratio, resolution_type;
@@ -408,7 +410,7 @@ export async function generateImageComposition(
           ],
         }),
         http_common_info: {
-          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK) : DEFAULT_ASSISTANT_ID_CN
+          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : (isJP ? DEFAULT_ASSISTANT_ID_JP : DEFAULT_ASSISTANT_ID_HK)) : DEFAULT_ASSISTANT_ID_CN
         }
       },
     }
@@ -527,7 +529,8 @@ export async function generateImages(
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
   const isHK = refreshToken.toLowerCase().startsWith('hk-');
-  const isInternational = isUS || isHK;
+  const isJP = refreshToken.toLowerCase().startsWith('jp-');
+  const isInternational = isUS || isHK || isJP;
   const model = getModel(_model, isInternational);
   logger.info(`使用模型: ${_model} 映射模型: ${model} 分辨率: ${resolution} 比例: ${ratio} 精细度: ${sampleStrength}`);
 
@@ -552,7 +555,8 @@ async function generateImagesInternal(
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
   const isHK = refreshToken.toLowerCase().startsWith('hk-');
-  const isInternational = isUS || isHK;
+  const isJP = refreshToken.toLowerCase().startsWith('jp-');
+  const isInternational = isUS || isHK || isJP;
   const model = getModel(_model, isInternational);
   
   let width, height, image_ratio, resolution_type;
@@ -664,7 +668,7 @@ async function generateImagesInternal(
           ],
         }),
         http_common_info: {
-          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK) : DEFAULT_ASSISTANT_ID_CN
+          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : (isJP ? DEFAULT_ASSISTANT_ID_JP : DEFAULT_ASSISTANT_ID_HK)) : DEFAULT_ASSISTANT_ID_CN
         }
       },
     }
@@ -785,7 +789,8 @@ async function generateJimeng40MultiImages(
 ) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
   const isHK = refreshToken.toLowerCase().startsWith('hk-');
-  const isInternational = isUS || isHK;
+  const isJP = refreshToken.toLowerCase().startsWith('jp-');
+  const isInternational = isUS || isHK || isJP;
   const model = getModel(_model, isInternational);
   const { width, height, image_ratio, resolution_type } = getResolutionParams(resolution, ratio);
 
@@ -869,7 +874,7 @@ async function generateJimeng40MultiImages(
           ],
         }),
         http_common_info: {
-          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : DEFAULT_ASSISTANT_ID_HK) : DEFAULT_ASSISTANT_ID_CN
+          aid: isInternational ? (isUS ? DEFAULT_ASSISTANT_ID_US : (isJP ? DEFAULT_ASSISTANT_ID_JP : DEFAULT_ASSISTANT_ID_HK)) : DEFAULT_ASSISTANT_ID_CN
         }
       },
     }
