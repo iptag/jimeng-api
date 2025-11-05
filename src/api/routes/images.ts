@@ -26,6 +26,29 @@ function mapQualityToResolution(quality: string): string {
   return qualityToResolutionMap[quality] || '2k';
 }
 
+// 归一化 prompt，尽量容忍各种输入
+function normalizePromptInput(input: any): string {
+  if (_.isUndefined(input) || _.isNull(input)) return "";
+  if (_.isString(input)) return input;
+  if (_.isNumber(input) || _.isBoolean(input)) return String(input);
+  if (_.isArray(input)) {
+    const parts = input
+      .filter((v) => !_.isUndefined(v) && !_.isNull(v))
+      .map((v) => {
+        if (_.isString(v)) return v;
+        if (_.isNumber(v) || _.isBoolean(v)) return String(v);
+        if (_.isObject(v) && _.isString((v as any).text)) return (v as any).text;
+        try { return JSON.stringify(v); } catch { return String(v); }
+      });
+    return parts.join(" ").trim();
+  }
+  if (_.isObject(input)) {
+    if (_.isString((input as any).text)) return (input as any).text as string;
+    try { return JSON.stringify(input); } catch { return String(input); }
+  }
+  return String(input);
+}
+
 function mapOpenAIParamsToInternal(openaiParams: any) {
   // 处理 negative_prompt 连接到 prompt 末尾
   let finalPrompt = openaiParams.prompt || '';
@@ -244,13 +267,11 @@ export default {
         // 兼容部分客户端的 prompt 重复字段或数组情况，先做归一化
         const rawBody: any = request.body || {};
         const rawPrompt = rawBody.prompt ?? rawBody['prompt[]'] ?? rawBody['prompt'];
-        if (!_.isUndefined(rawPrompt)) {
-          request.body.prompt = Array.isArray(rawPrompt) ? rawPrompt.filter(_.isString).join(' ') : rawPrompt;
-        }
+        request.body.prompt = normalizePromptInput(rawPrompt);
         request
           .validate("body.model", v => _.isUndefined(v) || _.isString(v))
-          // 允许 prompt 为字符串或字符串数组（部分客户端会重复字段导致解析为数组）
-          .validate("body.prompt", v => _.isString(v) || (_.isArray(v) && v.every(_.isString)))
+          // prompt 可选，容忍为空或各种类型（已在上方归一化为字符串）
+          .validate("body.prompt", v => _.isUndefined(v) || _.isString(v))
           .validate("headers.authorization", _.isString);
 
         // 提取 image[] 数组
@@ -330,13 +351,12 @@ export default {
         // JSON 数据处理
         request
           .validate("body.model", v => _.isUndefined(v) || _.isString(v))
-          // 允许 prompt 为字符串或字符串数组
-          .validate("body.prompt", v => _.isString(v) || (_.isArray(v) && v.every(_.isString)))
+          // prompt 可选，先放宽校验，再归一化
+          .validate("body.prompt", v => _.isUndefined(v) || _.isString(v) || _.isArray(v) || _.isNumber(v) || _.isObject(v))
           .validate("headers.authorization", _.isString);
 
         const {
           model,
-          prompt,
           image,
           size,
           quality,
@@ -346,7 +366,7 @@ export default {
         } = request.body;
 
         // 规范化 prompt 为字符串
-        const normalizedPrompt = Array.isArray(prompt) ? prompt.join(' ') : prompt;
+        const normalizedPrompt = normalizePromptInput(request.body.prompt);
 
         // 检查 image 参数是否为空或未定义
         if (_.isUndefined(image)) {
