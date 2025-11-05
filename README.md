@@ -17,6 +17,8 @@
 - 📊 **Detailed Logs**: Structured logging for easy debugging.
 - 🐳 **Docker Support**: Containerized deployment, ready to use out of the box.
 - ⚙️ **Log Level Control**: Dynamically adjust log output level through configuration files.
+- 🧩 **OpenAI-style Compatibility**: `/v1/images/edits` accepts `size`, `quality`, `response_format`.
+- ✨ **Better Prompt Handling**: tolerant normalization for strings, arrays, primitives, and `{ text }` objects.
 
 ## ⚠ Risk Warning
 
@@ -298,6 +300,33 @@ curl -X POST http://localhost:5100/v1/images/compositions \
   ],
   "input_images": 1,
   "composition_type": "multi_image_synthesis"
+}
+```
+
+
+### Image Edits (OpenAI-style)
+
+`POST /v1/images/edits`
+
+- Use `size` instead of `ratio`, and `quality` instead of `resolution`.
+- Unsupported: `width`, `height` (use `size`).
+- Returns `url` or `b64_json` based on `response_format`.
+
+Parameters
+- `model` (string)
+- `prompt` (string | array | number | boolean | object with `text`)
+- `image` or `images` (string or string[] for URLs in JSON; in multipart use `image`, `image[]`, `images`, `images[]` for files)
+- `size` (e.g., `1024x1024`, `1536x1024`, `1024x1536`, or `auto`)
+- `quality` (`high`|`medium`|`low`)
+- `negative_prompt` (optional)
+- `sample_strength` (optional, 0.0–1.0)
+- `response_format` (`url`|`b64_json`)
+
+Response example for `b64_json`
+```json
+{
+  "created": 1703123456,
+  "data": [{ "b64_json": "..." }]
 }
 ```
 

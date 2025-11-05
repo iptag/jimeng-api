@@ -15,6 +15,8 @@
 - 📊 **详细日志**: 结构化日志记录，便于调试
 - 🐳 **Docker支持**: 容器化部署，开箱即用
 - ⚙️ **日志级别控制**: 可通过配置文件动态调整日志输出级别
+- 🧩 OpenAI 风格兼容：`/v1/images/edits` 支持 `size`、`quality`、`response_format`。
+- ✨ Prompt 归一化增强：兼容字符串、数组、原始类型与 `{ text }` 对象。
 
 ## ⚠ 风险警告
 
@@ -315,6 +317,79 @@ curl -X POST http://localhost:5100/v1/images/compositions \
   "composition_type": "multi_image_synthesis"
 }
 ```
+
+### 图像编辑（OpenAI 风格）
+
+POST `/v1/images/edits`
+
+- 使用 `size` 代替 `ratio`，`quality` 代替 `resolution`。
+- 不支持：`width`、`height`（请用 `size`）。
+- `response_format` 支持 `url` 与 `b64_json`。
+
+参数
+- `model` (string)
+- `prompt` (string | array | number | boolean | `{ text: string }`)
+- `image` 或 `images`：JSON 场景为字符串或字符串数组（URL）；multipart 场景可用 `image`、`image[]`、`images`、`images[]` 文件字段。
+- `size`：如 `1024x1024`、`1536x1024`、`1024x1536`、`auto`
+- `quality`：`high`|`medium`|`low`
+- `negative_prompt`（可选）
+- `sample_strength`（可选，0.0–1.0）
+- `response_format`：`url`|`b64_json`
+
+`b64_json` 响应示例
+```json
+{
+  "created": 1703123456,
+  "data": [{ "b64_json": "..." }]
+}
+```
+
+注意
+- 区域前缀支持：`us-`、`hk-`、`jp-`；国内区使用原始 token。
+- 国际 `nanobanana` 模型输出固定 `1024x1024` 且 `2k`。
+
+### 视频生成
+
+POST `/v1/videos/generations`
+
+请求参数
+- `model` (string，默认控制器内置模型)
+- `prompt` (string)
+- `ratio` (string，可选)
+- `resolution` (string，可选，默认 `720p`)
+- `duration` (number，可选，仅支持 `5` 或 `10` 秒；multipart 可传字符串 `"5"|"10"`)
+- `file_paths` / `filePaths` (array，可选)：图生视频的本地文件路径（与 `files` 二选一）
+- `files` (multipart，可选)：上传文件；支持首尾帧（`first_frame_image`、`end_frame_image`）等由服务端解析
+- `response_format`：`url`（默认）或 `b64_json`
+
+示例（JSON）
+```bash
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  -d '{
+    "model": "jimeng-video-3.0",
+    "prompt": "一只可爱的猫在草地上奔跑",
+    "ratio": "1:1",
+    "resolution": "720p",
+    "duration": 5,
+    "response_format": "url"
+  }'
+```
+
+示例（multipart，本地文件）
+```bash
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  -F "prompt=一只可爱的猫在草地上奔跑" \
+  -F "model=jimeng-video-3.0" \
+  -F "ratio=1:1" \
+  -F "resolution=720p" \
+  -F "duration=10" \
+  -F "file_paths[]=/path/to/local/image1.jpg"
+```
+
+当 `response_format=b64_json` 时，返回 BASE64 编码字符串。
 
 #### ❓ **常见问题与解决方案**
 
