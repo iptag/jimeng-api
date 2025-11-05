@@ -8,7 +8,8 @@ import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
-import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, VIDEO_MODEL_MAP } from "@/api/consts/common.ts";
+import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, VIDEO_MODEL_MAP } from "@/api/consts/common.ts";
+import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK, BASE_URL_IMAGEX_US, BASE_URL_IMAGEX_HK } from "@/api/consts/dreamina.ts";
 
 export const DEFAULT_MODEL = DEFAULT_VIDEO_MODEL;
 
@@ -24,16 +25,16 @@ function createSignature(
   accessKeyId: string,
   secretAccessKey: string,
   sessionToken?: string,
-  payload: string = ''
+  payload: string = '',
+  region: string = 'cn-north-1'
 ) {
   const urlObj = new URL(url);
   const pathname = urlObj.pathname || '/';
   const search = urlObj.search;
-  
+
   // 创建规范请求
   const timestamp = headers['x-amz-date'];
   const date = timestamp.substr(0, 8);
-  const region = 'cn-north-1';
   const service = 'imagex';
   
   // 规范化查询参数
@@ -128,40 +129,53 @@ function calculateCRC32(buffer: ArrayBuffer): string {
 
 // 核心上传逻辑：上传二进制buffer到ImageX
 async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string): Promise<string> {
+    // 检测区域
+    const isUS = refreshToken.toLowerCase().startsWith('us-');
+    const isHK = refreshToken.toLowerCase().startsWith('hk-');
+    const isJP = refreshToken.toLowerCase().startsWith('jp-');
+    const isInternational = isUS || isHK || isJP;
+
+    logger.info(`开始上传视频图片... (isInternational: ${isInternational}, isUS: ${isUS}, isHK: ${isHK}, isJP: ${isJP})`);
+
     // 第一步：获取上传令牌
     const tokenResult = await request("post", "/mweb/v1/get_upload_token", refreshToken, {
       data: {
         scene: 2, // AIGC 图片上传场景
       },
     });
-    
+
     const { access_key_id, secret_access_key, session_token, service_id } = tokenResult;
     if (!access_key_id || !secret_access_key || !session_token) {
       throw new Error("获取上传令牌失败");
     }
-    
-    const actualServiceId = service_id || "tb4s082cfz";
+
+    const actualServiceId = service_id || (isUS ? "wopfjsm1ax" : (isHK || isJP) ? "wopfjsm1ax" : "tb4s082cfz");
     logger.info(`获取上传令牌成功: service_id=${actualServiceId}`);
     
     const fileSize = imageBuffer.byteLength;
     const crc32 = calculateCRC32(imageBuffer);
     
     logger.info(`图片Buffer准备完成: 大小=${fileSize}字节, CRC32=${crc32}`);
-    
+
     // 第二步：申请图片上传权限
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:\-]/g, '').replace(/\.\d{3}Z$/, 'Z');
-    
+
     const randomStr = Math.random().toString(36).substring(2, 12);
-    const applyUrl = `https://imagex.bytedanceapi.com/?Action=ApplyImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}&FileSize=${fileSize}&s=${randomStr}`;
-    
+    const applyUrlHost = isUS ? BASE_URL_IMAGEX_US : (isHK || isJP) ? BASE_URL_IMAGEX_HK : 'https://imagex.bytedanceapi.com';
+    const applyUrl = `${applyUrlHost}/?Action=ApplyImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}&FileSize=${fileSize}&s=${randomStr}${isInternational ? '&device_platform=web' : ''}`;
+
+    const region = isUS ? 'us-east-1' : (isHK || isJP) ? 'ap-southeast-1' : 'cn-north-1';
+
     const requestHeaders = {
       'x-amz-date': timestamp,
       'x-amz-security-token': session_token
     };
-    
-    const authorization = createSignature('GET', applyUrl, requestHeaders, access_key_id, secret_access_key, session_token);
-    
+
+    const authorization = createSignature('GET', applyUrl, requestHeaders, access_key_id, secret_access_key, session_token, '', region);
+
+    const origin = isUS ? new URL(BASE_URL_DREAMINA_US).origin : (isHK || isJP) ? new URL(BASE_URL_DREAMINA_HK).origin : 'https://jimeng.jianying.com';
+
     logger.info(`申请上传权限: ${applyUrl}`);
     
     const applyResponse = await fetch(applyUrl, {
@@ -170,8 +184,8 @@ async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string
         'accept': '*/*',
         'accept-language': 'zh-CN,zh;q=0.9',
         'authorization': authorization,
-        'origin': 'https://jimeng.jianying.com',
-        'referer': 'https://jimeng.jianying.com/ai-tool/video/generate',
+        'origin': origin,
+        'referer': `${origin}/ai-tool/video/generate`,
         'sec-ch-ua': '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
         'sec-ch-ua-mobile': '?0',
         'sec-ch-ua-platform': '"Windows"',
@@ -240,26 +254,26 @@ async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string
     }
     
     logger.info(`图片文件上传成功`);
-    
+
     // 第四步：提交上传
-    const commitUrl = `https://imagex.bytedanceapi.com/?Action=CommitImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}`;
-    
+    const commitUrl = `${applyUrlHost}/?Action=CommitImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}`;
+
     const commitTimestamp = new Date().toISOString().replace(/[:\-]/g, '').replace(/\.\d{3}Z$/, 'Z');
     const commitPayload = JSON.stringify({
       SessionKey: uploadAddress.SessionKey,
       SuccessActionStatus: "200"
     });
-    
+
     const payloadHash = crypto.createHash('sha256').update(commitPayload, 'utf8').digest('hex');
-    
+
     const commitRequestHeaders = {
       'x-amz-date': commitTimestamp,
       'x-amz-security-token': session_token,
       'x-amz-content-sha256': payloadHash
     };
-    
-    const commitAuthorization = createSignature('POST', commitUrl, commitRequestHeaders, access_key_id, secret_access_key, session_token, commitPayload);
-    
+
+    const commitAuthorization = createSignature('POST', commitUrl, commitRequestHeaders, access_key_id, secret_access_key, session_token, commitPayload, region);
+
     const commitResponse = await fetch(commitUrl, {
       method: 'POST',
       headers: {
@@ -267,8 +281,8 @@ async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string
         'accept-language': 'zh-CN,zh;q=0.9',
         'authorization': commitAuthorization,
         'content-type': 'application/json',
-        'origin': 'https://jimeng.jianying.com',
-        'referer': 'https://jimeng.jianying.com/ai-tool/video/generate',
+        'origin': origin,
+        'referer': `${origin}/ai-tool/video/generate`,
         'sec-ch-ua': '"Not A(Brand";v="8", "Chromium";v="132", "Google Chrome";v="132"',
         'sec-ch-ua-mobile': '?0',
         'sec-ch-ua-platform': '"Windows"',
@@ -372,6 +386,14 @@ export async function generateVideo(
   },
   refreshToken: string
 ) {
+  // 检测区域
+  const isUS = refreshToken.toLowerCase().startsWith('us-');
+  const isHK = refreshToken.toLowerCase().startsWith('hk-');
+  const isJP = refreshToken.toLowerCase().startsWith('jp-');
+  const isInternational = isUS || isHK || isJP;
+
+  logger.info(`视频生成区域检测: isUS=${isUS}, isHK=${isHK}, isJP=${isJP}, isInternational=${isInternational}`);
+
   const model = getModel(_model);
 
   // 将秒转换为毫秒，只支持5秒和10秒
@@ -518,7 +540,7 @@ export async function generateVideo(
       },
       data: {
         "extend": {
-          "root_model": end_frame_image ? MODEL_MAP['jimeng-video-3.0'] : model,
+          "root_model": end_frame_image ? VIDEO_MODEL_MAP['jimeng-video-3.0'] : model,
           "m_video_commerce_info": {
             benefit_type: "basic_video_operation_vgfm_v_three",
             resource_id: "generate_video",
@@ -590,7 +612,9 @@ export async function generateVideo(
           }],
         }),
         http_common_info: {
-          aid: Number(DEFAULT_ASSISTANT_ID_CN),
+          aid: isInternational
+            ? (isUS ? DEFAULT_ASSISTANT_ID_US : (isJP ? DEFAULT_ASSISTANT_ID_JP : DEFAULT_ASSISTANT_ID_HK))
+            : DEFAULT_ASSISTANT_ID_CN
         },
       },
     }
@@ -600,158 +624,165 @@ export async function generateVideo(
   if (!historyId)
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录ID不存在");
 
-  // 轮询获取结果
-  let status = 20, failCode, item_list = [];
-  let retryCount = 0;
-  const maxRetries = 60; // 增加重试次数，支持约20分钟的总重试时间
-  
-  // 首次查询前等待更长时间，让服务器有时间处理请求
+  logger.info(`视频生成任务已提交，history_id: ${historyId}，等待生成完成...`);
+
+  // 首次查询前等待，让服务器有时间处理请求
   await new Promise((resolve) => setTimeout(resolve, 5000));
-  
-  logger.info(`开始轮询视频生成结果，历史ID: ${historyId}，最大重试次数: ${maxRetries}`);
-  logger.info(`即梦官网API地址: https://jimeng.jianying.com/mweb/v1/get_history_by_ids`);
-  logger.info(`视频生成请求已发送，请同时在即梦官网查看: https://jimeng.jianying.com/ai-tool/video/generate`);
-  
-  while (status === 20 && retryCount < maxRetries) {
-    try {
-      // 构建请求URL和参数
-      const requestUrl = "/mweb/v1/get_history_by_ids";
-      const requestData = {
-        history_ids: [historyId],
-      };
-      
-      // 尝试两种不同的API请求方式
-      let result;
-      let useAlternativeApi = retryCount > 10 && retryCount % 2 === 0; // 在重试10次后，每隔一次尝试备用API
-      
-      if (useAlternativeApi) {
-        // 备用API请求方式
-        logger.info(`尝试备用API请求方式，URL: ${requestUrl}, 历史ID: ${historyId}, 重试次数: ${retryCount + 1}/${maxRetries}`);
-        const alternativeRequestData = {
-          history_record_ids: [historyId],
-        };
+
+  // 使用 SmartPoller 进行智能轮询
+  const maxPollCount = 900; // 增加轮询次数，支持更长的生成时间
+  let pollAttempts = 0;
+
+  const poller = new SmartPoller({
+    maxPollCount,
+    pollInterval: 2000, // 2秒基础间隔
+    expectedItemCount: 1,
+    type: 'video',
+    timeoutSeconds: 1200 // 20分钟超时
+  });
+
+  const { result: pollingResult, data: finalHistoryData } = await poller.poll(async () => {
+    pollAttempts++;
+
+    // 尝试两种不同的API请求方式
+    let result;
+    let historyData;
+    let useAlternativeApi = pollAttempts > 10 && pollAttempts % 2 === 0 && !isInternational; // 国际站不使用备用API
+
+    if (useAlternativeApi) {
+      // 备用API请求方式（仅国内站）
+      try {
+        logger.info(`尝试备用API请求方式: /mweb/v1/get_history_records, 历史ID: ${historyId}`);
         result = await request("post", "/mweb/v1/get_history_records", refreshToken, {
-          data: alternativeRequestData,
+          data: {
+            history_record_ids: [historyId],
+          },
         });
-        logger.info(`备用API响应: ${JSON.stringify(result)}`);
-        
+
         // 尝试直接从响应中提取视频URL
         const responseStr = JSON.stringify(result);
         const videoUrlMatch = responseStr.match(/https:\/\/v[0-9]+-artist\.vlabvod\.com\/[^"\s]+/);
         if (videoUrlMatch && videoUrlMatch[0]) {
           logger.info(`从备用API响应中直接提取到视频URL: ${videoUrlMatch[0]}`);
-          // 提前返回找到的URL
-          return videoUrlMatch[0];
+          // 构造成功状态并返回
+          return {
+            status: {
+              status: 10,
+              itemCount: 1,
+              historyId
+            } as PollingStatus,
+            data: {
+              status: 10,
+              item_list: [{
+                video: {
+                  transcoded_video: {
+                    origin: {
+                      video_url: videoUrlMatch[0]
+                    }
+                  }
+                }
+              }]
+            }
+          };
         }
-      } else {
-        // 标准API请求方式
-        logger.info(`发送请求获取视频生成结果，URL: ${requestUrl}, 历史ID: ${historyId}, 重试次数: ${retryCount + 1}/${maxRetries}`);
-        result = await request("post", requestUrl, refreshToken, {
-          data: requestData,
-        });
-        const responseStr = JSON.stringify(result);
-        logger.info(`标准API响应摘要: ${responseStr.substring(0, 300)}...`);
-        
-        // 尝试直接从响应中提取视频URL
-        const videoUrlMatch = responseStr.match(/https:\/\/v[0-9]+-artist\.vlabvod\.com\/[^"\s]+/);
-        if (videoUrlMatch && videoUrlMatch[0]) {
-          logger.info(`从标准API响应中直接提取到视频URL: ${videoUrlMatch[0]}`);
-          // 提前返回找到的URL
-          return videoUrlMatch[0];
+
+        // 备用API可能返回两种格式：history_records 数组 或 直接用 historyId 作为 key
+        if (result.history_records && result.history_records.length > 0) {
+          historyData = result.history_records[0];
+          logger.info(`从备用API获取到历史记录（数组格式）`);
+        } else if (result[historyId]) {
+          historyData = result[historyId];
+          logger.info(`从备用API获取到历史记录（对象格式）`);
+        } else {
+          logger.warn(`备用API未返回历史记录，fallback到标准API`);
+          useAlternativeApi = false; // fallback到标准API
         }
+      } catch (error) {
+        logger.warn(`备用API请求失败: ${error.message}，fallback到标准API`);
+        useAlternativeApi = false; // fallback到标准API
       }
-      
+    }
 
-      // 检查结果是否有效
-      let historyData;
-      
-      if (useAlternativeApi && result.history_records && result.history_records.length > 0) {
-        // 处理备用API返回的数据格式
-        historyData = result.history_records[0];
-        logger.info(`从备用API获取到历史记录`);
-      } else if (result.history_list && result.history_list.length > 0) {
-        // 处理标准API返回的数据格式
-        historyData = result.history_list[0];
-        logger.info(`从标准API获取到历史记录`);
-      } else {
-        // 两种API都没有返回有效数据
-        logger.warn(`历史记录不存在，重试中 (${retryCount + 1}/${maxRetries})... 历史ID: ${historyId}`);
-        logger.info(`请同时在即梦官网检查视频是否已生成: https://jimeng.jianying.com/ai-tool/video/generate`);
-        
-        retryCount++;
-        // 增加重试间隔时间，但设置上限为30秒
-        const waitTime = Math.min(2000 * (retryCount + 1), 30000);
-        logger.info(`等待 ${waitTime}ms 后进行第 ${retryCount + 1} 次重试`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-        continue;
-      }
-      
-      // 记录获取到的结果详情
-      logger.info(`获取到历史记录结果: ${JSON.stringify(historyData)}`);
-      
+    if (!useAlternativeApi) {
+      // 标准API请求方式
+      result = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
+        data: {
+          history_ids: [historyId],
+        },
+      });
 
-      // 从历史数据中提取状态和结果
-      status = historyData.status;
-      failCode = historyData.fail_code;
-      item_list = historyData.item_list || [];
-      
-      logger.info(`视频生成状态: ${status}, 失败代码: ${failCode || '无'}, 项目列表长度: ${item_list.length}`);
-      
-      // 如果有视频URL，提前记录
-      let tempVideoUrl = item_list?.[0]?.video?.transcoded_video?.origin?.video_url;
-      if (!tempVideoUrl) {
-        // 尝试从其他可能的路径获取
-        tempVideoUrl = item_list?.[0]?.video?.play_url || 
-                      item_list?.[0]?.video?.download_url || 
-                      item_list?.[0]?.video?.url;
+      // 尝试直接从响应中提取视频URL
+      const responseStr = JSON.stringify(result);
+      const videoUrlMatch = responseStr.match(/https:\/\/v[0-9]+-artist\.vlabvod\.com\/[^"\s]+/);
+      if (videoUrlMatch && videoUrlMatch[0]) {
+        logger.info(`从标准API响应中直接提取到视频URL: ${videoUrlMatch[0]}`);
+        // 构造成功状态并返回
+        return {
+          status: {
+            status: 10,
+            itemCount: 1,
+            historyId
+          } as PollingStatus,
+          data: {
+            status: 10,
+            item_list: [{
+              video: {
+                transcoded_video: {
+                  origin: {
+                    video_url: videoUrlMatch[0]
+                  }
+                }
+              }
+            }]
+          }
+        };
       }
-      
+
+      // 检查响应中是否有该 history_id 的数据
+      if (!result[historyId]) {
+        logger.warn(`标准API未返回历史记录，historyId: ${historyId}`);
+        throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+      }
+
+      historyData = result[historyId];
+      logger.info(`从标准API获取到历史记录`);
+    }
+
+    const currentStatus = historyData.status;
+    const currentFailCode = historyData.fail_code;
+    const currentItemList = historyData.item_list || [];
+    const finishTime = historyData.task?.finish_time || 0;
+
+    // 记录详细信息
+    if (currentItemList.length > 0) {
+      const tempVideoUrl = currentItemList[0]?.video?.transcoded_video?.origin?.video_url ||
+                          currentItemList[0]?.video?.play_url ||
+                          currentItemList[0]?.video?.download_url ||
+                          currentItemList[0]?.video?.url;
       if (tempVideoUrl) {
         logger.info(`检测到视频URL: ${tempVideoUrl}`);
       }
-
-      if (status === 30) {
-        let error;
-        if (failCode === 2038 || failCode === '2038') {
-          error = new APIException(EX.API_CONTENT_FILTERED, "内容被过滤");
-        } else if (failCode === 1001 || failCode === '1001') {
-          error = new APIException(EX.API_IMAGE_GENERATION_FAILED, `生成失败，错误码: ${failCode}。可能原因：文本或图片中包含敏感内容`);
-        } else {
-          error = new APIException(EX.API_IMAGE_GENERATION_FAILED, `生成失败，错误码: ${failCode}`);
-        }
-        // 添加历史ID到错误对象，以便在chat.ts中显示
-        error.historyId = historyId;
-        throw error;
-      }
-      
-      // 如果状态仍在处理中，等待后继续
-      if (status === 20) {
-        const waitTime = 2000 * (Math.min(retryCount + 1, 5)); // 随着重试次数增加等待时间，但最多10秒
-        logger.info(`视频生成中，状态码: ${status}，等待 ${waitTime}ms 后继续查询`);
-        await new Promise((resolve) => setTimeout(resolve, waitTime));
-      }
-    } catch (error) {
-      logger.error(`轮询视频生成结果出错: ${error.message}`);
-      retryCount++;
-      await new Promise((resolve) => setTimeout(resolve, 2000 * (retryCount + 1)));
     }
-  }
-  
-  // 如果达到最大重试次数仍未成功
-  if (retryCount >= maxRetries && status === 20) {
-    logger.error(`视频生成超时，已尝试 ${retryCount} 次，总耗时约 ${Math.floor(retryCount * 2000 / 1000 / 60)} 分钟`);
-    const error = new APIException(EX.API_IMAGE_GENERATION_FAILED, "获取视频生成结果超时，请稍后在即梦官网查看您的视频");
-    // 添加历史ID到错误对象，以便在chat.ts中显示
-    error.historyId = historyId;
-    throw error;
-  }
+
+    return {
+      status: {
+        status: currentStatus,
+        failCode: currentFailCode,
+        itemCount: currentItemList.length,
+        finishTime,
+        historyId
+      } as PollingStatus,
+      data: historyData
+    };
+  }, historyId);
+
+  const item_list = finalHistoryData.item_list || [];
 
   // 提取视频URL
   let videoUrl = item_list?.[0]?.video?.transcoded_video?.origin?.video_url;
-  
+
   // 如果通过常规路径无法获取视频URL，尝试其他可能的路径
   if (!videoUrl) {
-    // 尝试从item_list中的其他可能位置获取
     if (item_list?.[0]?.video?.play_url) {
       videoUrl = item_list[0].video.play_url;
       logger.info(`从play_url获取到视频URL: ${videoUrl}`);
@@ -762,15 +793,13 @@ export async function generateVideo(
       videoUrl = item_list[0].video.url;
       logger.info(`从url获取到视频URL: ${videoUrl}`);
     } else {
-      // 如果仍然找不到，记录错误并抛出异常
       logger.error(`未能获取视频URL，item_list: ${JSON.stringify(item_list)}`);
-      const error = new APIException(EX.API_IMAGE_GENERATION_FAILED, "未能获取视频URL，请稍后在即梦官网查看");
-      // 添加历史ID到错误对象，以便在chat.ts中显示
+      const error = new APIException(EX.API_IMAGE_GENERATION_FAILED, "未能获取视频URL，请稍后查看");
       error.historyId = historyId;
       throw error;
     }
   }
 
-  logger.info(`视频生成成功，URL: ${videoUrl}`);
+  logger.info(`视频生成成功，URL: ${videoUrl}，总耗时: ${pollingResult.elapsedTime}秒`);
   return videoUrl;
 }
