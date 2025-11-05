@@ -44,16 +44,14 @@ function mapOpenAIParamsToInternal(openaiParams: any) {
   };
 }
 
-function formatOpenAIResponse(resultUrls: string[], responseFormat: string, created: number) {
-  let data = [];
+async function formatOpenAIResponse(resultUrls: string[], responseFormat: string, created: number) {
   if (responseFormat === "b64_json") {
-    // 注意：这里需要异步转换，所以在调用时需要 await
-    return resultUrls.map(url => util.fetchFileBASE64(url)).then(b64Array => 
-      b64Array.map(b64 => ({ b64_json: b64 }))
-    ).then(formattedData => ({ created, data: formattedData }));
+    const b64Array = await Promise.all(resultUrls.map((url) => util.fetchFileBASE64(url)));
+    const data = b64Array.map((b64) => ({ b64_json: b64 }));
+    return { created, data };
   } else {
-    data = resultUrls.map(url => ({ url }));
-    return Promise.resolve({ created, data });
+    const data = resultUrls.map((url) => ({ url }));
+    return { created, data };
   }
 }
 
