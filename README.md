@@ -357,6 +357,7 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 **Supported Video Models**:
 - `jimeng-video-3.0-pro` - Professional Edition
 - `jimeng-video-3.0` - Standard Edition
+- `jimeng-video-3.0-fast` - Fast Edition (China site only)
 - `jimeng-video-2.0-pro` - Professional Edition v2
 - `jimeng-video-2.0` - Standard Edition v2
 

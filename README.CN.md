@@ -372,6 +372,7 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 **支持的视频模型**:
 - `jimeng-video-3.0-pro` - 专业版
 - `jimeng-video-3.0` - 标准版
+- `jimeng-video-3.0-fast` - 极速版（仅国内站支持）
 - `jimeng-video-2.0-pro` - 专业版v2
 - `jimeng-video-2.0` - 标准版v2
 

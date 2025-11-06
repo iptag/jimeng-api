@@ -58,6 +58,7 @@ export const IMAGE_MODEL_MAP_US = {
 export const VIDEO_MODEL_MAP = {
   "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
+  "jimeng-video-3.0-fast": "dreamina_ic_generate_video_model_vgfm_3.0_fast",
   "jimeng-video-2.0": "dreamina_ic_generate_video_model_vgfm_lite",
   "jimeng-video-2.0-pro": "dreamina_ic_generate_video_model_vgfm1.0"
 };

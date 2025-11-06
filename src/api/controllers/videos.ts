@@ -537,7 +537,7 @@ export async function generateVideo(
     {
       params: {
         aigc_features: "app_lip_sync",
-        web_version: "6.6.0",
+        web_version: "7.5.0",
         da_version: DRAFT_VERSION,
       },
       data: {
@@ -646,109 +646,47 @@ export async function generateVideo(
   const { result: pollingResult, data: finalHistoryData } = await poller.poll(async () => {
     pollAttempts++;
 
-    // 尝试两种不同的API请求方式
-    let result;
-    let historyData;
-    let useAlternativeApi = pollAttempts > 10 && pollAttempts % 2 === 0 && !isInternational; // 国际站不使用备用API
+    // 使用标准API请求方式
+    const result = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
+      data: {
+        history_ids: [historyId],
+      },
+    });
 
-    if (useAlternativeApi) {
-      // 备用API请求方式（仅国内站）
-      try {
-        logger.info(`尝试备用API请求方式: /mweb/v1/get_history_records, 历史ID: ${historyId}`);
-        result = await request("post", "/mweb/v1/get_history_records", refreshToken, {
-          data: {
-            history_record_ids: [historyId],
-          },
-        });
-
-        // 尝试直接从响应中提取视频URL
-        const responseStr = JSON.stringify(result);
-        const videoUrlMatch = responseStr.match(/https:\/\/v[0-9]+-artist\.vlabvod\.com\/[^"\s]+/);
-        if (videoUrlMatch && videoUrlMatch[0]) {
-          logger.info(`从备用API响应中直接提取到视频URL: ${videoUrlMatch[0]}`);
-          // 构造成功状态并返回
-          return {
-            status: {
-              status: 10,
-              itemCount: 1,
-              historyId
-            } as PollingStatus,
-            data: {
-              status: 10,
-              item_list: [{
-                video: {
-                  transcoded_video: {
-                    origin: {
-                      video_url: videoUrlMatch[0]
-                    }
-                  }
-                }
-              }]
-            }
-          };
-        }
-
-        // 备用API可能返回两种格式：history_records 数组 或 直接用 historyId 作为 key
-        if (result.history_records && result.history_records.length > 0) {
-          historyData = result.history_records[0];
-          logger.info(`从备用API获取到历史记录（数组格式）`);
-        } else if (result[historyId]) {
-          historyData = result[historyId];
-          logger.info(`从备用API获取到历史记录（对象格式）`);
-        } else {
-          logger.warn(`备用API未返回历史记录，fallback到标准API`);
-          useAlternativeApi = false; // fallback到标准API
-        }
-      } catch (error) {
-        logger.warn(`备用API请求失败: ${error.message}，fallback到标准API`);
-        useAlternativeApi = false; // fallback到标准API
-      }
-    }
-
-    if (!useAlternativeApi) {
-      // 标准API请求方式
-      result = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
+    // 尝试直接从响应中提取视频URL
+    const responseStr = JSON.stringify(result);
+    const videoUrlMatch = responseStr.match(/https:\/\/v[0-9]+-artist\.vlabvod\.com\/[^"\s]+/);
+    if (videoUrlMatch && videoUrlMatch[0]) {
+      logger.info(`从API响应中直接提取到视频URL: ${videoUrlMatch[0]}`);
+      // 构造成功状态并返回
+      return {
+        status: {
+          status: 10,
+          itemCount: 1,
+          historyId
+        } as PollingStatus,
         data: {
-          history_ids: [historyId],
-        },
-      });
-
-      // 尝试直接从响应中提取视频URL
-      const responseStr = JSON.stringify(result);
-      const videoUrlMatch = responseStr.match(/https:\/\/v[0-9]+-artist\.vlabvod\.com\/[^"\s]+/);
-      if (videoUrlMatch && videoUrlMatch[0]) {
-        logger.info(`从标准API响应中直接提取到视频URL: ${videoUrlMatch[0]}`);
-        // 构造成功状态并返回
-        return {
-          status: {
-            status: 10,
-            itemCount: 1,
-            historyId
-          } as PollingStatus,
-          data: {
-            status: 10,
-            item_list: [{
-              video: {
-                transcoded_video: {
-                  origin: {
-                    video_url: videoUrlMatch[0]
-                  }
+          status: 10,
+          item_list: [{
+            video: {
+              transcoded_video: {
+                origin: {
+                  video_url: videoUrlMatch[0]
                 }
               }
-            }]
-          }
-        };
-      }
-
-      // 检查响应中是否有该 history_id 的数据
-      if (!result[historyId]) {
-        logger.warn(`标准API未返回历史记录，historyId: ${historyId}`);
-        throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
-      }
-
-      historyData = result[historyId];
-      logger.info(`从标准API获取到历史记录`);
+            }
+          }]
+        }
+      };
     }
+
+    // 检查响应中是否有该 history_id 的数据
+    if (!result[historyId]) {
+      logger.warn(`API未返回历史记录，historyId: ${historyId}`);
+      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+    }
+
+    const historyData = result[historyId];
 
     const currentStatus = historyData.status;
     const currentFailCode = historyData.fail_code;
