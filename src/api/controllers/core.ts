@@ -19,11 +19,13 @@ import {
   DEFAULT_ASSISTANT_ID_US,
   DEFAULT_ASSISTANT_ID_HK,
   DEFAULT_ASSISTANT_ID_JP,
+  DEFAULT_ASSISTANT_ID_SG,
   PLATFORM_CODE,
   REGION_CN,
   REGION_US,
   REGION_HK,
   REGION_JP,
+  REGION_SG,
   VERSION_CODE,
   RETRY_CONFIG
 } from "@/api/consts/common.ts";
@@ -77,12 +79,14 @@ export function generateCookie(refreshToken: string) {
   const isUS = refreshToken.toLowerCase().startsWith('us-');
   const isHK = refreshToken.toLowerCase().startsWith('hk-');
   const isJP = refreshToken.toLowerCase().startsWith('jp-');
-  const token = (isUS || isHK || isJP) ? refreshToken.substring(3) : refreshToken;
+  const isSG = refreshToken.toLowerCase().startsWith('sg-');
+  const token = (isUS || isHK || isJP || isSG) ? refreshToken.substring(3) : refreshToken;
 
   let storeRegion = 'cn-gd';
   if (isUS) storeRegion = 'us';
   else if (isHK) storeRegion = 'hk';
   else if (isJP) storeRegion = 'hk'; // JP uses HK store region
+  else if (isSG) storeRegion = 'hk'; // SG uses HK store region
 
   return [
     `_tea_web_id=${WEB_ID}`,
@@ -159,7 +163,8 @@ export async function request(
   const isUS = refreshToken.toLowerCase().startsWith('us-');
   const isHK = refreshToken.toLowerCase().startsWith('hk-');
   const isJP = refreshToken.toLowerCase().startsWith('jp-');
-  const token = await acquireToken((isUS || isHK || isJP) ? refreshToken.substring(3) : refreshToken);
+  const isSG = refreshToken.toLowerCase().startsWith('sg-');
+  const token = await acquireToken((isUS || isHK || isJP || isSG) ? refreshToken.substring(3) : refreshToken);
   const deviceTime = util.unixTimestamp();
   const sign = util.md5(
     `9e2c|${uri.slice(-7)}|${PLATFORM_CODE}|${VERSION_CODE}|${deviceTime}||11ac`
@@ -177,11 +182,19 @@ export async function request(
     }
     aid = DEFAULT_ASSISTANT_ID_US;
     region = REGION_US;
-  } else if (isHK || isJP) {
-    // HK and JP regions use the same SG base URL
+  } else if (isHK || isJP || isSG) {
+    // HK, JP and SG regions use the same SG base URL
     baseUrl = BASE_URL_DREAMINA_HK;
-    aid = isJP ? DEFAULT_ASSISTANT_ID_JP : DEFAULT_ASSISTANT_ID_HK;
-    region = isJP ? REGION_JP : REGION_HK;
+    if (isJP) {
+      aid = DEFAULT_ASSISTANT_ID_JP;
+      region = REGION_JP;
+    } else if (isSG) {
+      aid = DEFAULT_ASSISTANT_ID_SG;
+      region = REGION_SG;
+    } else {
+      aid = DEFAULT_ASSISTANT_ID_HK;
+      region = REGION_HK;
+    }
   } else {
     // CN region
     baseUrl = BASE_URL_CN;
@@ -196,7 +209,7 @@ export async function request(
     aid: aid,
     device_platform: "web",
     region: region,
-    ...(isUS || isHK || isJP ? {} : { webId: WEB_ID }),
+    ...(isUS || isHK || isJP || isSG ? {} : { webId: WEB_ID }),
     da_version: "3.3.2",
     web_component_open_flag: 1,
     web_version: "7.5.0",

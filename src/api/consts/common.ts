@@ -13,12 +13,14 @@ export const DEFAULT_ASSISTANT_ID_CN = 513695;
 export const DEFAULT_ASSISTANT_ID_US = 513641;
 export const DEFAULT_ASSISTANT_ID_HK = 513641;
 export const DEFAULT_ASSISTANT_ID_JP = 513641;
+export const DEFAULT_ASSISTANT_ID_SG = 513641;
 
 // 地区
 export const REGION_CN = "cn";
 export const REGION_US = "US";
 export const REGION_HK = "HK";
 export const REGION_JP = "JP";
+export const REGION_SG = "SG";
 
 // 平台代码
 export const PLATFORM_CODE = "7";

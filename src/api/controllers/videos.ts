@@ -8,7 +8,7 @@ import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
-import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, VIDEO_MODEL_MAP } from "@/api/consts/common.ts";
+import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_ASSISTANT_ID_SG, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, VIDEO_MODEL_MAP } from "@/api/consts/common.ts";
 import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK, BASE_URL_IMAGEX_US, BASE_URL_IMAGEX_HK } from "@/api/consts/dreamina.ts";
 
 export const DEFAULT_MODEL = DEFAULT_VIDEO_MODEL;
@@ -133,9 +133,10 @@ async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string
     const isUS = refreshToken.toLowerCase().startsWith('us-');
     const isHK = refreshToken.toLowerCase().startsWith('hk-');
     const isJP = refreshToken.toLowerCase().startsWith('jp-');
-    const isInternational = isUS || isHK || isJP;
+    const isSG = refreshToken.toLowerCase().startsWith('sg-');
+    const isInternational = isUS || isHK || isJP || isSG;
 
-    logger.info(`开始上传视频图片... (isInternational: ${isInternational}, isUS: ${isUS}, isHK: ${isHK}, isJP: ${isJP})`);
+    logger.info(`开始上传视频图片... (isInternational: ${isInternational}, isUS: ${isUS}, isHK: ${isHK}, isJP: ${isJP}, isSG: ${isSG})`);
 
     // 第一步：获取上传令牌
     const tokenResult = await request("post", "/mweb/v1/get_upload_token", refreshToken, {
@@ -149,7 +150,7 @@ async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string
       throw new Error("获取上传令牌失败");
     }
 
-    const actualServiceId = service_id || (isUS ? "wopfjsm1ax" : (isHK || isJP) ? "wopfjsm1ax" : "tb4s082cfz");
+    const actualServiceId = service_id || (isUS ? "wopfjsm1ax" : (isHK || isJP || isSG) ? "wopfjsm1ax" : "tb4s082cfz");
     logger.info(`获取上传令牌成功: service_id=${actualServiceId}`);
     
     const fileSize = imageBuffer.byteLength;
@@ -162,10 +163,10 @@ async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string
     const timestamp = now.toISOString().replace(/[:\-]/g, '').replace(/\.\d{3}Z$/, 'Z');
 
     const randomStr = Math.random().toString(36).substring(2, 12);
-    const applyUrlHost = isUS ? BASE_URL_IMAGEX_US : (isHK || isJP) ? BASE_URL_IMAGEX_HK : 'https://imagex.bytedanceapi.com';
+    const applyUrlHost = isUS ? BASE_URL_IMAGEX_US : (isHK || isJP || isSG) ? BASE_URL_IMAGEX_HK : 'https://imagex.bytedanceapi.com';
     const applyUrl = `${applyUrlHost}/?Action=ApplyImageUpload&Version=2018-08-01&ServiceId=${actualServiceId}&FileSize=${fileSize}&s=${randomStr}${isInternational ? '&device_platform=web' : ''}`;
 
-    const region = isUS ? 'us-east-1' : (isHK || isJP) ? 'ap-southeast-1' : 'cn-north-1';
+    const region = isUS ? 'us-east-1' : (isHK || isJP || isSG) ? 'ap-southeast-1' : 'cn-north-1';
 
     const requestHeaders = {
       'x-amz-date': timestamp,
@@ -174,7 +175,7 @@ async function _uploadImageBuffer(imageBuffer: ArrayBuffer, refreshToken: string
 
     const authorization = createSignature('GET', applyUrl, requestHeaders, access_key_id, secret_access_key, session_token, '', region);
 
-    const origin = isUS ? new URL(BASE_URL_DREAMINA_US).origin : (isHK || isJP) ? new URL(BASE_URL_DREAMINA_HK).origin : 'https://jimeng.jianying.com';
+    const origin = isUS ? new URL(BASE_URL_DREAMINA_US).origin : (isHK || isJP || isSG) ? new URL(BASE_URL_DREAMINA_HK).origin : 'https://jimeng.jianying.com';
 
     logger.info(`申请上传权限: ${applyUrl}`);
     
@@ -390,9 +391,10 @@ export async function generateVideo(
   const isUS = refreshToken.toLowerCase().startsWith('us-');
   const isHK = refreshToken.toLowerCase().startsWith('hk-');
   const isJP = refreshToken.toLowerCase().startsWith('jp-');
-  const isInternational = isUS || isHK || isJP;
+  const isSG = refreshToken.toLowerCase().startsWith('sg-');
+  const isInternational = isUS || isHK || isJP || isSG;
 
-  logger.info(`视频生成区域检测: isUS=${isUS}, isHK=${isHK}, isJP=${isJP}, isInternational=${isInternational}`);
+  logger.info(`视频生成区域检测: isUS=${isUS}, isHK=${isHK}, isJP=${isJP}, isSG=${isSG}, isInternational=${isInternational}`);
 
   const model = getModel(_model);
 
@@ -613,7 +615,7 @@ export async function generateVideo(
         }),
         http_common_info: {
           aid: isInternational
-            ? (isUS ? DEFAULT_ASSISTANT_ID_US : (isJP ? DEFAULT_ASSISTANT_ID_JP : DEFAULT_ASSISTANT_ID_HK))
+            ? (isUS ? DEFAULT_ASSISTANT_ID_US : (isJP ? DEFAULT_ASSISTANT_ID_JP : (isSG ? DEFAULT_ASSISTANT_ID_SG : DEFAULT_ASSISTANT_ID_HK)))
             : DEFAULT_ASSISTANT_ID_CN
         },
       },
