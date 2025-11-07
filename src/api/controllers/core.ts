@@ -14,6 +14,7 @@ import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK } from "@/api/consts/dreamin
 import {
   BASE_URL_CN,
   BASE_URL_US_COMMERCE,
+  BASE_URL_HK_COMMERCE,
   BASE_URL_HK,
   DEFAULT_ASSISTANT_ID_CN,
   DEFAULT_ASSISTANT_ID_US,
@@ -184,7 +185,11 @@ export async function request(
     region = REGION_US;
   } else if (isHK || isJP || isSG) {
     // HK, JP and SG regions use the same SG base URL
-    baseUrl = BASE_URL_DREAMINA_HK;
+    if (uri.startsWith("/commerce/")) {
+      baseUrl = BASE_URL_HK_COMMERCE;
+    } else {
+      baseUrl = BASE_URL_DREAMINA_HK;
+    }
     if (isJP) {
       aid = DEFAULT_ASSISTANT_ID_JP;
       region = REGION_JP;

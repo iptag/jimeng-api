@@ -6,6 +6,7 @@
 export const BASE_URL_CN = "https://jimeng.jianying.com";
 
 export const BASE_URL_US_COMMERCE = "https://commerce.us.capcut.com";
+export const BASE_URL_HK_COMMERCE = "https://commerce-api-sg.capcut.com";
 export const BASE_URL_HK = "https://mweb-api-sg.capcut.com";
 
 // 默认助手ID
