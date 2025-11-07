@@ -110,12 +110,22 @@ export function generateCookie(refreshToken: string) {
  * @param refreshToken 用于刷新access_token的refresh_token
  */
 export async function getCredit(refreshToken: string) {
+  // 判断是否为国际站
+  const isInternational = refreshToken.toLowerCase().startsWith('us-') ||
+                          refreshToken.toLowerCase().startsWith('hk-') ||
+                          refreshToken.toLowerCase().startsWith('jp-') ||
+                          refreshToken.toLowerCase().startsWith('sg-');
+
+  const referer = isInternational
+    ? "https://dreamina.capcut.com/"
+    : "https://jimeng.jianying.com/ai-tool/image/generate";
+
   const {
     credit: { gift_credit, purchase_credit, vip_credit }
   } = await request("POST", "/commerce/v1/benefits/user_credit", refreshToken, {
     data: {},
     headers: {
-      Referer: "https://jimeng.jianying.com/ai-tool/image/generate",
+      Referer: referer,
     },
     noDefaultParams: true
   });
@@ -135,12 +145,23 @@ export async function getCredit(refreshToken: string) {
  */
 export async function receiveCredit(refreshToken: string) {
   logger.info("正在收取今日积分...")
+
+  // 判断是否为国际站
+  const isInternational = refreshToken.toLowerCase().startsWith('us-') ||
+                          refreshToken.toLowerCase().startsWith('hk-') ||
+                          refreshToken.toLowerCase().startsWith('jp-') ||
+                          refreshToken.toLowerCase().startsWith('sg-');
+
+  const referer = isInternational
+    ? "https://dreamina.capcut.com/"
+    : "https://jimeng.jianying.com/ai-tool/home";
+
   const { cur_total_credits, receive_quota  } = await request("POST", "/commerce/v1/benefits/credit_receive", refreshToken, {
     data: {
       time_zone: "Asia/Shanghai"
     },
     headers: {
-      Referer: "https://jimeng.jianying.com/ai-tool/image/generate"
+      Referer: referer
     }
   });
   logger.info(`\n今日${receive_quota}积分收取成功\n剩余积分: ${cur_total_credits}`);
