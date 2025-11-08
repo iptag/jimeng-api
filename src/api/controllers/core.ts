@@ -1,4 +1,3 @@
-import { PassThrough } from "stream";
 import path from "path";
 import _ from "lodash";
 import mime from "mime";
@@ -6,7 +5,6 @@ import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
 
 import APIException from "@/lib/exceptions/APIException.ts";
 import EX from "@/api/consts/exceptions.ts";
-import { createParser } from "eventsource-parser";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
 import { JimengErrorHandler, JimengErrorResponse } from "@/lib/error-handler.ts";
@@ -74,13 +72,71 @@ export async function acquireToken(refreshToken: string): Promise<string> {
 }
 
 /**
+ * 解析 token 中的地区信息
+ *
+ * @param refreshToken 刷新令牌
+ * @returns 地区信息对象
+ */
+export interface RegionInfo {
+  isUS: boolean;
+  isHK: boolean;
+  isJP: boolean;
+  isSG: boolean;
+  isInternational: boolean;
+  isCN: boolean;
+}
+
+export function parseRegionFromToken(refreshToken: string): RegionInfo {
+  const token = refreshToken.toLowerCase();
+  const isUS = token.startsWith('us-');
+  const isHK = token.startsWith('hk-');
+  const isJP = token.startsWith('jp-');
+  const isSG = token.startsWith('sg-');
+  const isInternational = isUS || isHK || isJP || isSG;
+
+  return {
+    isUS,
+    isHK,
+    isJP,
+    isSG,
+    isInternational,
+    isCN: !isInternational
+  };
+}
+
+/**
+ * 根据地区获取 Referer
+ *
+ * @param refreshToken 刷新令牌
+ * @param cnPath 国内站路径
+ * @returns Referer URL
+ */
+export function getRefererByRegion(refreshToken: string, cnPath: string): string {
+  const { isInternational } = parseRegionFromToken(refreshToken);
+  return isInternational
+    ? "https://dreamina.capcut.com/"
+    : `https://jimeng.jianying.com${cnPath}`;
+}
+
+/**
+ * 根据地区获取 AssistantID
+ *
+ * @param regionInfo 地区信息
+ * @returns AssistantID
+ */
+export function getAssistantId(regionInfo: RegionInfo): number {
+  if (regionInfo.isUS) return DEFAULT_ASSISTANT_ID_US;
+  if (regionInfo.isJP) return DEFAULT_ASSISTANT_ID_JP;
+  if (regionInfo.isSG) return DEFAULT_ASSISTANT_ID_SG;
+  if (regionInfo.isHK) return DEFAULT_ASSISTANT_ID_HK;
+  return DEFAULT_ASSISTANT_ID_CN;
+}
+
+/**
  * 生成cookie
  */
 export function generateCookie(refreshToken: string) {
-  const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const isHK = refreshToken.toLowerCase().startsWith('hk-');
-  const isJP = refreshToken.toLowerCase().startsWith('jp-');
-  const isSG = refreshToken.toLowerCase().startsWith('sg-');
+  const { isUS, isHK, isJP, isSG } = parseRegionFromToken(refreshToken);
   const token = (isUS || isHK || isJP || isSG) ? refreshToken.substring(3) : refreshToken;
 
   let storeRegion = 'cn-gd';
@@ -110,15 +166,7 @@ export function generateCookie(refreshToken: string) {
  * @param refreshToken 用于刷新access_token的refresh_token
  */
 export async function getCredit(refreshToken: string) {
-  // 判断是否为国际站
-  const isInternational = refreshToken.toLowerCase().startsWith('us-') ||
-                          refreshToken.toLowerCase().startsWith('hk-') ||
-                          refreshToken.toLowerCase().startsWith('jp-') ||
-                          refreshToken.toLowerCase().startsWith('sg-');
-
-  const referer = isInternational
-    ? "https://dreamina.capcut.com/"
-    : "https://jimeng.jianying.com/ai-tool/image/generate";
+  const referer = getRefererByRegion(refreshToken, "/ai-tool/image/generate");
 
   const {
     credit: { gift_credit, purchase_credit, vip_credit }
@@ -145,16 +193,7 @@ export async function getCredit(refreshToken: string) {
  */
 export async function receiveCredit(refreshToken: string) {
   logger.info("正在收取今日积分...")
-
-  // 判断是否为国际站
-  const isInternational = refreshToken.toLowerCase().startsWith('us-') ||
-                          refreshToken.toLowerCase().startsWith('hk-') ||
-                          refreshToken.toLowerCase().startsWith('jp-') ||
-                          refreshToken.toLowerCase().startsWith('sg-');
-
-  const referer = isInternational
-    ? "https://dreamina.capcut.com/"
-    : "https://jimeng.jianying.com/ai-tool/home";
+  const referer = getRefererByRegion(refreshToken, "/ai-tool/home");
 
   const { cur_total_credits, receive_quota  } = await request("POST", "/commerce/v1/benefits/credit_receive", refreshToken, {
     data: {
@@ -182,11 +221,9 @@ export async function request(
   refreshToken: string,
   options: AxiosRequestConfig & { noDefaultParams?: boolean } = {}
 ) {
-  const isUS = refreshToken.toLowerCase().startsWith('us-');
-  const isHK = refreshToken.toLowerCase().startsWith('hk-');
-  const isJP = refreshToken.toLowerCase().startsWith('jp-');
-  const isSG = refreshToken.toLowerCase().startsWith('sg-');
-  const token = await acquireToken((isUS || isHK || isJP || isSG) ? refreshToken.substring(3) : refreshToken);
+  const regionInfo = parseRegionFromToken(refreshToken);
+  const { isUS, isHK, isJP, isSG } = regionInfo;
+  const token = await acquireToken(regionInfo.isInternational ? refreshToken.substring(3) : refreshToken);
   const deviceTime = util.unixTimestamp();
   const sign = util.md5(
     `9e2c|${uri.slice(-7)}|${PLATFORM_CODE}|${VERSION_CODE}|${deviceTime}||11ac`

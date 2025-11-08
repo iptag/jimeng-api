@@ -302,6 +302,29 @@ const util = {
     });
     return result.data.toString("base64");
   },
+
+  /**
+   * 计算 ArrayBuffer 的 CRC32 值
+   * @param buffer ArrayBuffer 数据
+   * @returns CRC32 十六进制字符串
+   */
+  calculateCRC32(buffer: ArrayBuffer): string {
+    const crcTable = [];
+    for (let i = 0; i < 256; i++) {
+      let crc = i;
+      for (let j = 0; j < 8; j++) {
+        crc = (crc & 1) ? (0xEDB88320 ^ (crc >>> 1)) : (crc >>> 1);
+      }
+      crcTable[i] = crc;
+    }
+
+    let crc = 0 ^ (-1);
+    const bytes = new Uint8Array(buffer);
+    for (let i = 0; i < bytes.length; i++) {
+      crc = (crc >>> 8) ^ crcTable[(crc ^ bytes[i]) & 0xFF];
+    }
+    return ((crc ^ (-1)) >>> 0).toString(16).padStart(8, '0');
+  },
 };
 
 export default util;
