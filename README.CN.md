@@ -56,6 +56,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **美国站**：需要添加 **us-** 前缀，如 `Bearer us-your_session_id`
 > - **香港站**：需要添加 **hk-** 前缀，如 `Bearer hk-your_session_id`
 > - **日本站**：需要添加 **jp-** 前缀，如 `Bearer jp-your_session_id`
+> - **新加坡站**: 需要添加 **sg-** 前缀，如 `Bearer sg-your_session_id`
 >
 > **注意2**: 国内站和国际站现已同时支持*文生图*和*图生图*，国际站添加nanobanana模型。
 >
@@ -446,6 +447,7 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 **支持的视频模型**:
 - `jimeng-video-3.0-pro` - 专业版
 - `jimeng-video-3.0` - 标准版
+- `jimeng-video-3.0-fast` - 极速版（仅国内站支持）
 - `jimeng-video-2.0-pro` - 专业版v2
 - `jimeng-video-2.0` - 标准版v2
 

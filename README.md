@@ -54,6 +54,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **US site**: Add **us-** prefix, e.g., `Bearer us-your_session_id`
 > - **Hong Kong site**: Add **hk-** prefix, e.g., `Bearer hk-your_session_id`
 > - **Japan site**: Add **jp-** prefix, e.g., `Bearer jp-your_session_id`
+> - **Singapore site**: Add **sg-** prefix, e.g., `Bearer sg-your_session_id`
 >
 > **Note 2**: Domestic and international sites now support both *text-to-image* and *image-to-image*. The nanobanana model has been added for the international site.
 >
@@ -385,6 +386,7 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 **Supported Video Models**:
 - `jimeng-video-3.0-pro` - Professional Edition
 - `jimeng-video-3.0` - Standard Edition
+- `jimeng-video-3.0-fast` - Fast Edition (China site only)
 - `jimeng-video-2.0-pro` - Professional Edition v2
 - `jimeng-video-2.0` - Standard Edition v2
 

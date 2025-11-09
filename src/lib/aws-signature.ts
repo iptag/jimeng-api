@@ -11,16 +11,16 @@ export function createSignature(
   accessKeyId: string,
   secretAccessKey: string,
   sessionToken?: string,
-  payload: string = ''
+  payload: string = '',
+  region: string = 'cn-north-1'
 ) {
   const urlObj = new URL(url);
   const pathname = urlObj.pathname || '/';
   const search = urlObj.search;
-  
+
   // 创建规范请求
   const timestamp = headers['x-amz-date'];
   const date = timestamp.substr(0, 8);
-  const region = 'cn-north-1';
   const service = 'imagex';
   
   // 规范化查询参数
