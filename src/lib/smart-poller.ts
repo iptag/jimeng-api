@@ -122,8 +122,8 @@ export class SmartPoller {
       return { shouldExit: true, reason: '任务失败' };
     }
     
-    // 3. 已获得期望数量的结果
-    if (itemCount >= this.options.expectedItemCount) {
+    // 3. 已获得期望数量的结果（但必须状态已完成）
+    if (itemCount >= this.options.expectedItemCount && (status === 10 || status === 50)) {
       return { shouldExit: true, reason: `已获得完整结果集(${itemCount}/${this.options.expectedItemCount})` };
     }
     
