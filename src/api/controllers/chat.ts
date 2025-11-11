@@ -535,22 +535,6 @@ export async function createCompletionStream(
     } else if (requestType === 'image-to-image') {
       logger.info(`[Stream] 开始图生图，模型: ${_model}, 图片数量: ${images.length}`);
       const { model, width, height } = parseModel(_model);
-      stream.write(
-        "data: " +
-          JSON.stringify({
-            id: util.uuid(),
-            model: _model || model,
-            object: "chat.completion.chunk",
-            choices: [
-              {
-                index: 0,
-                delta: { role: "assistant", content: "🖼️ 图生图中，请稍候..." },
-                finish_reason: null,
-              },
-            ],
-          }) +
-          "\n\n"
-      );
 
       const imageInputs = images.map(img => 
         img.type === 'base64' ? base64ToBuffer(img.base64!) : img.url!
@@ -572,6 +556,7 @@ export async function createCompletionStream(
           if (!stream.destroyed && stream.writable) {
             for (let i = 0; i < imageUrls.length; i++) {
               const url = imageUrls[i];
+              const isLast = i === imageUrls.length - 1;
               stream.write(
                 "data: " +
                   JSON.stringify({
@@ -580,37 +565,18 @@ export async function createCompletionStream(
                     object: "chat.completion.chunk",
                     choices: [
                       {
-                        index: i + 1,
+                        index: 0,
                         delta: {
                           role: "assistant",
                           content: `![image_${i}](${url})\n`,
                         },
-                        finish_reason: i < imageUrls.length - 1 ? null : "stop",
+                        finish_reason: isLast ? "stop" : null,
                       },
                     ],
                   }) +
                   "\n\n"
               );
             }
-            stream.write(
-              "data: " +
-                JSON.stringify({
-                  id: util.uuid(),
-                  model: _model || model,
-                  object: "chat.completion.chunk",
-                  choices: [
-                    {
-                      index: imageUrls.length + 1,
-                      delta: {
-                        role: "assistant",
-                        content: "图生图完成！",
-                      },
-                      finish_reason: "stop",
-                    },
-                  ],
-                }) +
-                "\n\n"
-            );
             stream.end("data: [DONE]\n\n");
           } else {
             logger.debug('[Stream] 图生图完成，但流已关闭，跳过写入');
