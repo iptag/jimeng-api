@@ -6,10 +6,18 @@ import { tokenSplit } from '@/api/controllers/core.ts';
 import { createCompletion, createCompletionStream } from '@/api/controllers/chat.ts';
 
 /**
- * 将 OpenAI size 格式转换为 ratio 格式
- * 例如: "1024x1024" -> "1:1", "1792x1024" -> "16:9"
+ * 将 size 参数转换为 ratio 格式
+ * 支持两种格式:
+ * 1. 比例格式: "3:4", "16:9" -> 直接返回
+ * 2. 像素格式: "1024x1024" -> "1:1", "1792x1024" -> "16:9"
  */
 function sizeToRatio(size: string): string {
+    // 如果已经是比例格式（如 "3:4"），直接返回
+    if (size.includes(':')) {
+        return size;
+    }
+    
+    // 否则按照像素格式处理（如 "1024x1024"）
     const match = size.match(/(\d+)x(\d+)/);
     if (!match) return "1:1";
     
