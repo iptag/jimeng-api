@@ -41,20 +41,21 @@ function isVideoModel(model: string) {
  *
  * @param messages 参考gpt系列消息格式，多轮对话请完整提供上下文
  * @param refreshToken 用于刷新access_token的refresh_token
- * @param assistantId 智能体ID，默认使用jimeng原版
+ * @param _model 模型名称，默认使用jimeng原版
+ * @param options 生成选项（ratio, resolution, duration, sample_strength, negative_prompt）
  * @param retryCount 重试次数
  */
 export async function createCompletion(
   messages: any[],
   refreshToken: string,
   _model = DEFAULT_MODEL,
+  options: any = {},
   retryCount = 0
 ) {
   return (async () => {
     if (messages.length === 0)
       throw new APIException(EX.API_REQUEST_PARAMS_INVALID, "消息不能为空");
 
-    const { model, width, height } = parseModel(_model);
     logger.info(messages);
 
     // 检查是否为视频生成请求
@@ -66,9 +67,9 @@ export async function createCompletion(
           _model,
           messages[messages.length - 1].content,
           {
-            width,
-            height,
-            resolution: "720p", // 默认分辨率
+            ratio: options.ratio || "1:1",
+            resolution: options.resolution || "720p",
+            duration: options.duration || 5,
           },
           refreshToken
         );
@@ -119,12 +120,15 @@ export async function createCompletion(
       }
     } else {
       // 图像生成
+      const { model, width, height } = parseModel(_model);
       const imageUrls = await generateImages(
         model,
         messages[messages.length - 1].content,
         {
-          width,
-          height,
+          ratio: options.ratio || "1:1",
+          resolution: options.resolution || "2k",
+          sampleStrength: options.sample_strength || 0.5,
+          negativePrompt: options.negative_prompt || "",
         },
         refreshToken
       );
@@ -156,7 +160,7 @@ export async function createCompletion(
       logger.warn(`Try again after ${RETRY_CONFIG.RETRY_DELAY / 1000}s...`);
       return (async () => {
         await new Promise((resolve) => setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY));
-        return createCompletion(messages, refreshToken, _model, retryCount + 1);
+        return createCompletion(messages, refreshToken, _model, options, retryCount + 1);
       })();
     }
     throw err;
@@ -168,17 +172,18 @@ export async function createCompletion(
  *
  * @param messages 参考gpt系列消息格式，多轮对话请完整提供上下文
  * @param refreshToken 用于刷新access_token的refresh_token
- * @param assistantId 智能体ID，默认使用jimeng原版
+ * @param _model 模型名称，默认使用jimeng原版
+ * @param options 生成选项（ratio, resolution, duration, sample_strength, negative_prompt）
  * @param retryCount 重试次数
  */
 export async function createCompletionStream(
   messages: any[],
   refreshToken: string,
   _model = DEFAULT_MODEL,
+  options: any = {},
   retryCount = 0
 ) {
   return (async () => {
-    const { model, width, height } = parseModel(_model);
     logger.info(messages);
 
     const stream = new PassThrough();
@@ -298,7 +303,11 @@ export async function createCompletionStream(
       generateVideo(
         _model,
         messages[messages.length - 1].content,
-        { width, height, resolution: "720p" },
+        {
+          ratio: options.ratio || "1:1",
+          resolution: options.resolution || "720p",
+          duration: options.duration || 5,
+        },
         refreshToken
       )
         .then((videoUrl) => {
@@ -405,6 +414,7 @@ export async function createCompletionStream(
         });
     } else {
       // 图像生成
+      const { model, width, height } = parseModel(_model);
       stream.write(
         "data: " +
           JSON.stringify({
@@ -425,7 +435,12 @@ export async function createCompletionStream(
       generateImages(
         model,
         messages[messages.length - 1].content,
-        { width, height },
+        {
+          ratio: options.ratio || "1:1",
+          resolution: options.resolution || "2k",
+          sampleStrength: options.sample_strength || 0.5,
+          negativePrompt: options.negative_prompt || "",
+        },
         refreshToken
       )
         .then((imageUrls) => {
@@ -516,6 +531,7 @@ export async function createCompletionStream(
           messages,
           refreshToken,
           _model,
+          options,
           retryCount + 1
         );
       })();
