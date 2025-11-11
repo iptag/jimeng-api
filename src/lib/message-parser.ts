@@ -141,8 +141,9 @@ export function parseMessages(messages: any[]): ParsedMessage {
     }
   }
 
+  const finalText = allText.join('\n').trim();
   const result = {
-    text: allText.join('\n').trim(),
+    text: finalText,
     images: allImages,
     hasImages: allImages.length > 0
   };
@@ -150,6 +151,9 @@ export function parseMessages(messages: any[]): ParsedMessage {
   logger.info(`消息解析结果: 文本长度=${result.text.length}, 图片数量=${result.images.length}`);
   if (result.hasImages) {
     logger.info(`图片类型: ${result.images.map(img => img.type).join(', ')}`);
+  }
+  if (result.hasImages && !finalText) {
+    logger.warn('警告: 检测到图片但没有提取到文本内容，这可能导致生成结果不理想');
   }
 
   return result;

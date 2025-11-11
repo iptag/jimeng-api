@@ -63,10 +63,18 @@ export async function createCompletion(
     const targetMessages = userMessages.length > 0 ? [userMessages[userMessages.length - 1]] : [messages[messages.length - 1]];
     const { text: parsedPrompt, images, hasImages } = parseMessages(targetMessages);
     const fallbackPrompt = parseMessages([messages[messages.length - 1]]).text;
-    const finalPrompt = parsedPrompt || fallbackPrompt || "";
+    const finalPrompt = String(parsedPrompt || fallbackPrompt || "").trim();
     const requestType = detectRequestType(_model, hasImages);
 
     logger.info(`智能路由请求类型: ${requestType}, 提示词长度: ${finalPrompt.length}, 图片数量: ${images.length}`);
+    if (hasImages) {
+      logger.info(`检测到图片输入，图片类型: ${images.map(img => img.type).join(', ')}`);
+    }
+    
+    if (hasImages && images.length === 0) {
+      logger.error('路由检测到hasImages=true但images数组为空，这是一个bug');
+      throw new APIException(EX.API_REQUEST_PARAMS_INVALID, "消息解析错误：检测到图片标记但无法提取图片");
+    }
 
     if (requestType === 'text-to-video' || requestType === 'image-to-video') {
       try {
@@ -264,10 +272,35 @@ export async function createCompletionStream(
     const targetMessages = userMessages.length > 0 ? [userMessages[userMessages.length - 1]] : [messages[messages.length - 1]];
     const { text: parsedPrompt, images, hasImages } = parseMessages(targetMessages);
     const fallbackPrompt = parseMessages([messages[messages.length - 1]]).text;
-    const finalPrompt = parsedPrompt || fallbackPrompt || "";
+    const finalPrompt = String(parsedPrompt || fallbackPrompt || "").trim();
     const requestType = detectRequestType(_model, hasImages);
 
     logger.info(`[Stream] 智能路由请求类型: ${requestType}, 提示词长度: ${finalPrompt.length}, 图片数量: ${images.length}`);
+    if (hasImages) {
+      logger.info(`[Stream] 检测到图片输入，图片类型: ${images.map(img => img.type).join(', ')}`);
+    }
+    
+    if (hasImages && images.length === 0) {
+      logger.error('[Stream] 路由检测到hasImages=true但images数组为空，这是一个bug');
+      stream.write(
+        "data: " +
+          JSON.stringify({
+            id: util.uuid(),
+            model: _model,
+            object: "chat.completion.chunk",
+            choices: [
+              {
+                index: 0,
+                delta: { role: "assistant", content: "消息解析错误：检测到图片标记但无法提取图片" },
+                finish_reason: "stop",
+              },
+            ],
+          }) +
+          "\n\n"
+      );
+      stream.end("data: [DONE]\n\n");
+      return stream;
+    }
 
     if (requestType === 'text-to-video' || requestType === 'image-to-video') {
       const imageUrls = images.filter(img => img.type === 'url').map(img => img.url!);

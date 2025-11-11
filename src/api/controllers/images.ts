@@ -59,6 +59,16 @@ export async function generateImageComposition(
   },
   refreshToken: string
 ) {
+  if (typeof prompt !== 'string') {
+    logger.error(`图生图提示词类型错误: ${typeof prompt}, 期望string类型`);
+    throw new APIException(EX.API_REQUEST_PARAMS_INVALID, "提示词必须是字符串类型");
+  }
+  
+  if (!images || images.length === 0) {
+    logger.error('图生图缺少输入图片');
+    throw new APIException(EX.API_REQUEST_PARAMS_INVALID, "图生图至少需要1张输入图片");
+  }
+
   const regionInfo = parseRegionFromToken(refreshToken);
   const { isInternational } = regionInfo;
   const model = getModel(_model, isInternational);
@@ -336,6 +346,11 @@ async function generateImagesInternal(
   },
   refreshToken: string
 ) {
+  if (typeof prompt !== 'string') {
+    logger.error(`提示词类型错误: ${typeof prompt}, 期望string类型`);
+    throw new APIException(EX.API_REQUEST_PARAMS_INVALID, "提示词必须是字符串类型，如需使用图片请使用图生图接口");
+  }
+
   const regionInfo = parseRegionFromToken(refreshToken);
   const model = getModel(_model, regionInfo.isInternational);
   
