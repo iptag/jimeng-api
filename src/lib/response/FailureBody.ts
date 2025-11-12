@@ -7,15 +7,22 @@ import EX from '../consts/exceptions.ts';
 import HTTP_STATUS_CODES from '../http-status-codes.ts';
 
 export default class FailureBody extends Body {
-    
+
     constructor(error: APIException | Exception | Error, _data?: any) {
-        let errcode, errmsg, data = _data, httpStatusCode = HTTP_STATUS_CODES.OK;;
+        let errcode, errmsg, data = _data, httpStatusCode;
         if(_.isString(error))
             error = new Exception(EX.SYSTEM_ERROR, error);
-        else if(error instanceof APIException || error instanceof Exception)
+        if(error instanceof APIException || error instanceof Exception) {
             ({ errcode, errmsg, data, httpStatusCode } = error);
-        else if(_.isError(error))
-        ({ errcode, errmsg, data, httpStatusCode } = new Exception(EX.SYSTEM_ERROR, error.message));
+        }
+        else if(_.isError(error)) {
+            const exception = new Exception(EX.SYSTEM_ERROR, error.message);
+            ({ errcode, errmsg, data, httpStatusCode } = exception);
+        }
+        // 如果 httpStatusCode 仍然未定义，使用 500 作为默认值
+        if (!httpStatusCode) {
+            httpStatusCode = HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR;
+        }
         super({
             code: errcode || -1,
             message: errmsg || 'Internal error',
