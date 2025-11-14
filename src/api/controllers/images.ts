@@ -286,12 +286,11 @@ export async function generateImageComposition(
   const item_list = finalTaskInfo.item_list || [];
   const resultImageUrls = extractImageUrls(item_list);
 
-  logger.info(`图生图结果: 成功生成 ${resultImageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
-
   if (resultImageUrls.length === 0 && item_list.length > 0) {
-    logger.error(`图生图异常: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
-    logger.error(`完整的item_list数据: ${JSON.stringify(item_list, null, 2)}`);
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图生图失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
   }
+
+  logger.info(`图生图结果: 成功生成 ${resultImageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
 
   return resultImageUrls;
 }
@@ -522,12 +521,12 @@ async function generateImagesInternal(
 
   const imageUrls = extractImageUrls(item_list);
 
+  if (imageUrls.length === 0 && item_list.length > 0) {
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图像生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
+  }
+
   logger.info(`图像生成完成: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
 
-  if (imageUrls.length === 0) {
-    logger.error(`图像生成异常: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
-    logger.error(`完整的item_list数据: ${JSON.stringify(item_list, null, 2)}`);
-  }
   return imageUrls;
 }
 
@@ -697,6 +696,10 @@ async function generateJimeng40MultiImages(
 
   const item_list = finalTaskInfo.item_list || [];
   const imageUrls = extractImageUrls(item_list);
+
+  if (imageUrls.length === 0 && item_list.length > 0) {
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `多图生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
+  }
 
   logger.info(`多图生成结果: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
   return imageUrls;
