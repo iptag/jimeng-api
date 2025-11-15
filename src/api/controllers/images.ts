@@ -51,11 +51,13 @@ export async function generateImageComposition(
     resolution = '2k',
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
@@ -114,7 +116,7 @@ export async function generateImageComposition(
 
   const componentId = util.uuid();
   const submitId = util.uuid();
-  
+
   const core_param = {
     type: "",
     id: util.uuid(),
@@ -129,7 +131,7 @@ export async function generateImageComposition(
       width: width,
       resolution_type: resolution_type
     },
-    intelligent_ratio: false,
+    intelligent_ratio: intelligentRatio,
   };
 
   const { aigc_data } = await request(
@@ -304,19 +306,21 @@ export async function generateImages(
     resolution = '2k',
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
   const model = getModel(_model, regionInfo.isInternational);
-  logger.info(`使用模型: ${_model} 映射模型: ${model} 分辨率: ${resolution} 比例: ${ratio} 精细度: ${sampleStrength}`);
+  logger.info(`使用模型: ${_model} 映射模型: ${model} 分辨率: ${resolution} 比例: ${ratio} 精细度: ${sampleStrength} 智能比例: ${intelligentRatio}`);
 
-  return await generateImagesInternal(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt }, refreshToken);
+  return await generateImagesInternal(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
 }
 
 async function generateImagesInternal(
@@ -327,11 +331,13 @@ async function generateImagesInternal(
     resolution,
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio: string;
     resolution: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
@@ -368,12 +374,12 @@ async function generateImagesInternal(
   );
 
   if (isJimeng40MultiImage) {
-    return await generateJimeng40MultiImages(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt }, refreshToken);
+    return await generateJimeng40MultiImages(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
   }
 
   const componentId = util.uuid();
-  
-  const core_param = {
+
+  const core_param: any = {
     type: "",
     id: util.uuid(),
     model,
@@ -381,7 +387,6 @@ async function generateImagesInternal(
     negative_prompt: negativePrompt,
     seed: Math.floor(Math.random() * 100000000) + 2500000000,
     sample_strength: sampleStrength,
-    image_ratio: image_ratio,
     large_image_info: {
       type: "",
       id: util.uuid(),
@@ -389,8 +394,13 @@ async function generateImagesInternal(
       width: width,
       resolution_type: resolution_type
     },
-    intelligent_ratio: false
+    intelligent_ratio: intelligentRatio
   };
+
+  // 智能比例模式下不包含 image_ratio 字段
+  if (!intelligentRatio) {
+    core_param.image_ratio = image_ratio;
+  }
 
   const { aigc_data } = await request(
     "post",
@@ -538,11 +548,13 @@ async function generateJimeng40MultiImages(
     resolution = '2k',
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
@@ -606,24 +618,30 @@ async function generateJimeng40MultiImages(
                 generate: {
                   type: "",
                   id: util.uuid(),
-                  core_param: {
-                    type: "",
-                    id: util.uuid(),
-                    model,
-                    prompt,
-                    negative_prompt: negativePrompt,
-                    seed: Math.floor(Math.random() * 100000000) + 2500000000,
-                    sample_strength: sampleStrength,
-                    image_ratio: image_ratio,
-                    large_image_info: {
+                  core_param: (() => {
+                    const param: any = {
                       type: "",
                       id: util.uuid(),
-                      height: height,
-                      width: width,
-                      resolution_type: resolution_type
-                    },
-                    intelligent_ratio: false
-                  },
+                      model,
+                      prompt,
+                      negative_prompt: negativePrompt,
+                      seed: Math.floor(Math.random() * 100000000) + 2500000000,
+                      sample_strength: sampleStrength,
+                      large_image_info: {
+                        type: "",
+                        id: util.uuid(),
+                        height: height,
+                        width: width,
+                        resolution_type: resolution_type
+                      },
+                      intelligent_ratio: intelligentRatio
+                    };
+                    // 智能比例模式下不包含 image_ratio 字段
+                    if (!intelligentRatio) {
+                      param.image_ratio = image_ratio;
+                    }
+                    return param;
+                  })(),
                 },
               },
             },

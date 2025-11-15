@@ -168,8 +168,9 @@ log_level: info # Log levels: error, warning, info (default), debug
 **Request Parameters**:
 - `model` (string): The name of the model to use.
 - `prompt` (string): The text description of the image.
-- `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
+- `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. **Note**: When `intelligent_ratio` is `true`, this parameter will be ignored and the system will automatically infer the optimal ratio from the prompt.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
+- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. When enabled, the system automatically infers the optimal image ratio from the prompt (e.g., "portrait" → 9:16, "landscape" → 16:9).
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").
@@ -188,6 +189,13 @@ curl -X POST http://localhost:5100/v1/images/generations \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
     "{\"model\": \"jimeng-4.0\", \"prompt\": \"Magnificent landscape, ultra-high resolution\", \"ratio\": \"16:9\", \"resolution\": \"4k\"}"
+
+# Example using intelligent ratio (system will infer 9:16 from "portrait")
+curl -X POST http://localhost:5100/v1/images/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  -d \
+    "{\"model\": \"jimeng-4.0\", \"prompt\": \"A running lion, portrait orientation\", \"resolution\": \"2k\", \"intelligent_ratio\": true}"
 ```
 
 **Supported Models**:
@@ -250,6 +258,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 - `images` (array): An array of input images.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
+- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. When enabled, the system automatically adjusts the output ratio based on the prompt and input images.
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").
