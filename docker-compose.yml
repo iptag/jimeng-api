@@ -1,10 +1,12 @@
 services:
   jimeng-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: jimeng
+    # 使用 GHCR 上的镜像（生产环境）
+    image: ghcr.io/iptag/jimeng-api:latest
     container_name: jimeng-api
+    # 本地开发时可以取消注释下面的 build 配置
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "5100:5100"

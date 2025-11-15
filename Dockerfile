@@ -16,6 +16,14 @@ RUN yarn install --frozen-lockfile --registry https://registry.npmmirror.com/ --
 # 复制源代码
 COPY . .
 
+# 接收版本号参数并更新 package.json
+ARG VERSION
+RUN if [ -n "$VERSION" ]; then \
+    echo "Updating package.json version to $VERSION"; \
+    sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json; \
+    cat package.json | grep version; \
+    fi
+
 # 构建应用
 RUN yarn build
 

@@ -51,11 +51,13 @@ export async function generateImageComposition(
     resolution = '2k',
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
@@ -124,7 +126,7 @@ export async function generateImageComposition(
 
   const componentId = util.uuid();
   const submitId = util.uuid();
-  
+
   const core_param = {
     type: "",
     id: util.uuid(),
@@ -139,7 +141,7 @@ export async function generateImageComposition(
       width: width,
       resolution_type: resolution_type
     },
-    intelligent_ratio: false,
+    intelligent_ratio: intelligentRatio,
   };
 
   const { aigc_data } = await request(
@@ -296,12 +298,11 @@ export async function generateImageComposition(
   const item_list = finalTaskInfo.item_list || [];
   const resultImageUrls = extractImageUrls(item_list);
 
-  logger.info(`图生图结果: 成功生成 ${resultImageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
-
   if (resultImageUrls.length === 0 && item_list.length > 0) {
-    logger.error(`图生图异常: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
-    logger.error(`完整的item_list数据: ${JSON.stringify(item_list, null, 2)}`);
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图生图失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
   }
+
+  logger.info(`图生图结果: 成功生成 ${resultImageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
 
   return resultImageUrls;
 }
@@ -315,19 +316,21 @@ export async function generateImages(
     resolution = '2k',
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
   const model = getModel(_model, regionInfo.isInternational);
-  logger.info(`使用模型: ${_model} 映射模型: ${model} 分辨率: ${resolution} 比例: ${ratio} 精细度: ${sampleStrength}`);
+  logger.info(`使用模型: ${_model} 映射模型: ${model} 分辨率: ${resolution} 比例: ${ratio} 精细度: ${sampleStrength} 智能比例: ${intelligentRatio}`);
 
-  return await generateImagesInternal(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt }, refreshToken);
+  return await generateImagesInternal(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
 }
 
 async function generateImagesInternal(
@@ -338,11 +341,13 @@ async function generateImagesInternal(
     resolution,
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio: string;
     resolution: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
@@ -384,12 +389,12 @@ async function generateImagesInternal(
   );
 
   if (isJimeng40MultiImage) {
-    return await generateJimeng40MultiImages(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt }, refreshToken);
+    return await generateJimeng40MultiImages(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
   }
 
   const componentId = util.uuid();
-  
-  const core_param = {
+
+  const core_param: any = {
     type: "",
     id: util.uuid(),
     model,
@@ -397,7 +402,6 @@ async function generateImagesInternal(
     negative_prompt: negativePrompt,
     seed: Math.floor(Math.random() * 100000000) + 2500000000,
     sample_strength: sampleStrength,
-    image_ratio: image_ratio,
     large_image_info: {
       type: "",
       id: util.uuid(),
@@ -405,8 +409,13 @@ async function generateImagesInternal(
       width: width,
       resolution_type: resolution_type
     },
-    intelligent_ratio: false
+    intelligent_ratio: intelligentRatio
   };
+
+  // 智能比例模式下不包含 image_ratio 字段
+  if (!intelligentRatio) {
+    core_param.image_ratio = image_ratio;
+  }
 
   const { aigc_data } = await request(
     "post",
@@ -537,12 +546,12 @@ async function generateImagesInternal(
 
   const imageUrls = extractImageUrls(item_list);
 
+  if (imageUrls.length === 0 && item_list.length > 0) {
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图像生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
+  }
+
   logger.info(`图像生成完成: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
 
-  if (imageUrls.length === 0) {
-    logger.error(`图像生成异常: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
-    logger.error(`完整的item_list数据: ${JSON.stringify(item_list, null, 2)}`);
-  }
   return imageUrls;
 }
 
@@ -554,11 +563,13 @@ async function generateJimeng40MultiImages(
     resolution = '2k',
     sampleStrength = 0.5,
     negativePrompt = "",
+    intelligentRatio = false,
   }: {
     ratio?: string;
     resolution?: string;
     sampleStrength?: number;
     negativePrompt?: string;
+    intelligentRatio?: boolean;
   },
   refreshToken: string
 ) {
@@ -622,24 +633,30 @@ async function generateJimeng40MultiImages(
                 generate: {
                   type: "",
                   id: util.uuid(),
-                  core_param: {
-                    type: "",
-                    id: util.uuid(),
-                    model,
-                    prompt,
-                    negative_prompt: negativePrompt,
-                    seed: Math.floor(Math.random() * 100000000) + 2500000000,
-                    sample_strength: sampleStrength,
-                    image_ratio: image_ratio,
-                    large_image_info: {
+                  core_param: (() => {
+                    const param: any = {
                       type: "",
                       id: util.uuid(),
-                      height: height,
-                      width: width,
-                      resolution_type: resolution_type
-                    },
-                    intelligent_ratio: false
-                  },
+                      model,
+                      prompt,
+                      negative_prompt: negativePrompt,
+                      seed: Math.floor(Math.random() * 100000000) + 2500000000,
+                      sample_strength: sampleStrength,
+                      large_image_info: {
+                        type: "",
+                        id: util.uuid(),
+                        height: height,
+                        width: width,
+                        resolution_type: resolution_type
+                      },
+                      intelligent_ratio: intelligentRatio
+                    };
+                    // 智能比例模式下不包含 image_ratio 字段
+                    if (!intelligentRatio) {
+                      param.image_ratio = image_ratio;
+                    }
+                    return param;
+                  })(),
                 },
               },
             },
@@ -712,6 +729,10 @@ async function generateJimeng40MultiImages(
 
   const item_list = finalTaskInfo.item_list || [];
   const imageUrls = extractImageUrls(item_list);
+
+  if (imageUrls.length === 0 && item_list.length > 0) {
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `多图生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
+  }
 
   logger.info(`多图生成结果: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
   return imageUrls;

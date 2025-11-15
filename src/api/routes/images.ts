@@ -25,6 +25,7 @@ export default {
         .validate("body.negative_prompt", v => _.isUndefined(v) || _.isString(v))
         .validate("body.ratio", v => _.isUndefined(v) || _.isString(v))
         .validate("body.resolution", v => _.isUndefined(v) || _.isString(v))
+        .validate("body.intelligent_ratio", v => _.isUndefined(v) || _.isBoolean(v))
         .validate("body.sample_strength", v => _.isUndefined(v) || _.isFinite(v))
         .validate("body.response_format", v => _.isUndefined(v) || _.isString(v))
         .validate("headers.authorization", _.isString);
@@ -37,6 +38,7 @@ export default {
         negative_prompt: negativePrompt,
         ratio,
         resolution,
+        intelligent_ratio: intelligentRatio,
         sample_strength: sampleStrength,
         response_format,
       } = request.body;
@@ -47,6 +49,7 @@ export default {
         resolution,
         sampleStrength,
         negativePrompt,
+        intelligentRatio,
       }, token);
       let data = [];
       if (responseFormat == "b64_json") {
@@ -83,6 +86,7 @@ export default {
           .validate("body.negative_prompt", v => _.isUndefined(v) || _.isString(v))
           .validate("body.ratio", v => _.isUndefined(v) || _.isString(v))
           .validate("body.resolution", v => _.isUndefined(v) || _.isString(v))
+          .validate("body.intelligent_ratio", v => _.isUndefined(v) || (typeof v === 'string' && (v === 'true' || v === 'false')) || _.isBoolean(v))
           .validate("body.sample_strength", v => _.isUndefined(v) || (typeof v === 'string' && !isNaN(parseFloat(v))) || _.isFinite(v))
           .validate("body.response_format", v => _.isUndefined(v) || _.isString(v))
           .validate("headers.authorization", _.isString);
@@ -94,6 +98,7 @@ export default {
           .validate("body.negative_prompt", v => _.isUndefined(v) || _.isString(v))
           .validate("body.ratio", v => _.isUndefined(v) || _.isString(v))
           .validate("body.resolution", v => _.isUndefined(v) || _.isString(v))
+          .validate("body.intelligent_ratio", v => _.isUndefined(v) || _.isBoolean(v))
           .validate("body.sample_strength", v => _.isUndefined(v) || _.isFinite(v))
           .validate("body.response_format", v => _.isUndefined(v) || _.isString(v))
           .validate("headers.authorization", _.isString);
@@ -141,14 +146,19 @@ export default {
         negative_prompt: negativePrompt,
         ratio,
         resolution,
+        intelligent_ratio: intelligentRatio,
         sample_strength: sampleStrength,
         response_format,
       } = request.body;
 
-      // 如果是 multipart/form-data，需要将字符串转换为数字
+      // 如果是 multipart/form-data，需要将字符串转换为数字和布尔值
       const finalSampleStrength = isMultiPart && typeof sampleStrength === 'string'
         ? parseFloat(sampleStrength)
         : sampleStrength;
+
+      const finalIntelligentRatio = isMultiPart && typeof intelligentRatio === 'string'
+        ? intelligentRatio === 'true'
+        : intelligentRatio;
 
       const responseFormat = _.defaultTo(response_format, "url");
       const resultUrls = await generateImageComposition(model, prompt, images, {
@@ -156,6 +166,7 @@ export default {
         resolution,
         sampleStrength: finalSampleStrength,
         negativePrompt,
+        intelligentRatio: finalIntelligentRatio,
       }, token);
 
       let data = [];
