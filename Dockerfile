@@ -40,8 +40,9 @@ RUN addgroup -g 1001 -S nodejs && \
 # 设置工作目录
 WORKDIR /app
 
-# 复制package文件
-COPY package.json yarn.lock ./
+# 复制 package.json（使用构建阶段已更新版本）与 yarn.lock
+COPY --from=builder /app/package.json ./package.json
+COPY yarn.lock ./
 
 # 只安装生产依赖
 RUN yarn install --frozen-lockfile --production --registry https://registry.npmmirror.com/ --ignore-engines && \
