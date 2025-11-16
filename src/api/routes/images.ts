@@ -3,6 +3,7 @@ import _ from "lodash";
 
 import Request from "@/lib/request/Request.ts";
 import { generateImages, generateImageComposition } from "@/api/controllers/images.ts";
+import { DEFAULT_IMAGE_MODEL } from "@/api/consts/common.ts";
 import { tokenSplit } from "@/api/controllers/core.ts";
 import util from "@/lib/util.ts";
 
@@ -42,9 +43,10 @@ export default {
         sample_strength: sampleStrength,
         response_format,
       } = request.body;
+      const finalModel = _.defaultTo(model, DEFAULT_IMAGE_MODEL);
 
       const responseFormat = _.defaultTo(response_format, "url");
-      const imageUrls = await generateImages(model, prompt, {
+      const imageUrls = await generateImages(finalModel, prompt, {
         ratio,
         resolution,
         sampleStrength,
@@ -150,6 +152,7 @@ export default {
         sample_strength: sampleStrength,
         response_format,
       } = request.body;
+      const finalModel = _.defaultTo(model, DEFAULT_IMAGE_MODEL);
 
       // 如果是 multipart/form-data，需要将字符串转换为数字和布尔值
       const finalSampleStrength = isMultiPart && typeof sampleStrength === 'string'
@@ -161,7 +164,7 @@ export default {
         : intelligentRatio;
 
       const responseFormat = _.defaultTo(response_format, "url");
-      const resultUrls = await generateImageComposition(model, prompt, images, {
+      const resultUrls = await generateImageComposition(finalModel, prompt, images, {
         ratio,
         resolution,
         sampleStrength: finalSampleStrength,

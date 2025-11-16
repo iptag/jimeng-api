@@ -222,6 +222,12 @@ export async function generateImageComposition(
                     type: "",
                     id: util.uuid(),
                     generate_type: 0
+                  },
+
+                  gen_option: {
+                    type: "",
+                    id: util.uuid(),
+                    generate_all: false
                   }
                 },
               },
@@ -466,6 +472,11 @@ async function generateImagesInternal(
                   type: "",
                   id: util.uuid(),
                   core_param: core_param,
+                  gen_option: {
+                    type: "",
+                    id: util.uuid(),
+                    generate_all: false
+                  },
                 },
               },
             },
@@ -657,6 +668,11 @@ async function generateJimeng40MultiImages(
                     }
                     return param;
                   })(),
+                  gen_option: {
+                    type: "",
+                    id: util.uuid(),
+                    generate_all: false
+                  },
                 },
               },
             },

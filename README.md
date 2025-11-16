@@ -159,6 +159,54 @@ debug: false
 log_level: info # Log levels: error, warning, info (default), debug
 ```
 
+## 🤖 Claude Code Skill
+
+This project includes a dedicated Claude Code Skill for quick image generation using the Jimeng API directly within Claude Code conversations.
+
+### Features
+
+- 🎯 **Quick Generation**: Use Jimeng API to generate images directly in conversations
+- 📁 **Auto-Save**: Generated images are automatically saved to the project's `/pic` directory
+- 🔄 **Format Conversion**: Automatic WebP to PNG conversion
+- 🎨 **Dual Modes**: Supports both text-to-image and image-to-image generation
+- ⚙️ **Configurable**: Customizable ratio, resolution, model parameters, and more
+
+### Installation
+
+1. **Ensure the jimeng-api service is running**:
+```bash
+# Start the service with Docker
+docker-compose up -d
+# or
+docker run -d --name jimeng-api -p 5100:5100 ghcr.io/iptag/jimeng-api:latest
+```
+
+2. **Copy the skill to Claude Code's skills directory**:
+```bash
+# Copy to user-level global skills directory
+cp -r jimeng-api ~/.claude/skills/
+
+# Or copy to project-level skills directory
+cp -r jimeng-api ./.claude/skills/
+```
+
+3. **Install Python dependencies**:
+```bash
+pip install requests Pillow
+```
+
+### Usage Example
+
+In Claude Code, simply use natural language:
+
+```
+User: "Generate a 2K 16:9 image of a futuristic city at sunset using Jimeng"
+
+Claude: [Automatically invokes the skill, generates images, and saves to /pic directory]
+```
+
+For detailed usage, please refer to `jimeng-api/Skill.md`.
+
 ## 📖 API Documentation
 
 ### Text-to-Image
