@@ -15,6 +15,7 @@ logs
 .git
 .gitignore
 .gitattributes
+exclude_list.txt
 
 # 文档和说明
 README.md
