@@ -12,7 +12,7 @@ const startupTime = performance.now();
 (async () => {
   logger.header();
 
-  logger.info("<<<< jimeng free server >>>>");
+  logger.info("<<<< jimeng-api >>>>");
   logger.info("Version:", environment.package.version);
   logger.info("Process id:", process.pid);
   logger.info("Environment:", environment.env);

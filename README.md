@@ -200,7 +200,7 @@ pip install requests Pillow
 In Claude Code, simply use natural language:
 
 ```
-User: "Generate a 2K 16:9 image of a futuristic city at sunset using Jimeng"
+User: "my sessionid is xxxxx，Generate a 2K 16:9 image of a futuristic city at sunset using Jimeng"
 
 Claude: [Automatically invokes the skill, generates images, and saves to /pic directory]
 ```

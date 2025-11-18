@@ -202,7 +202,7 @@ pip install requests Pillow
 在 Claude Code 中,您可以直接对话使用:
 
 ```
-用户: "用即梦生成一张2K分辨率的16:9图片,内容是未来都市的日落景色"
+用户: "我的sessionid为xxxxx，用即梦生成一张2K分辨率的16:9图片,内容是未来都市的日落景色"
 
 Claude: [自动调用 skill,生成图片并保存到 /pic 目录]
 ```

@@ -1,11 +1,11 @@
 ---
-name: jimeng-image-generator
+name: jimeng-api
 description: Generate images using the Jimeng API based on text prompts. Use this skill when users request AI-generated images from the Jimeng (即梦AI) service, artwork, illustrations, or visual content creation. Supports text-to-image and image-to-image generation with customizable ratios and resolutions.
 version: 1.0.0
 dependencies: python>=3.7, requests>=2.28.0, Pillow>=9.0.0
 ---
 
-# Jimeng Image Generator
+# Jimeng API
 
 ## Overview
 
