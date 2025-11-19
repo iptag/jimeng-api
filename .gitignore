@@ -12,6 +12,7 @@ build/
 # Logs
 logs/
 *.log
+exclude_list.txt
 
 #images
 *.jpeg

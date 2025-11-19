@@ -50,7 +50,6 @@ RUN yarn install --frozen-lockfile --production --registry https://registry.npmm
 
 # 从构建阶段复制构建产物
 COPY --from=builder --chown=jimeng:nodejs /app/dist ./dist
-COPY --from=builder --chown=jimeng:nodejs /app/public ./public
 COPY --from=builder --chown=jimeng:nodejs /app/configs ./configs
 
 # 创建应用需要的目录并设置权限

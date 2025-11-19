@@ -23,8 +23,6 @@ export class SystemConfig {
     logWriteInterval: number;
     /** 日志文件有效期（毫秒） */
     logFileExpires: number;
-    /** 公共目录路径 */
-    publicDir: string;
     /** 临时文件有效期（毫秒） */
     tmpFileExpires: number;
     /** 请求体配置 */
@@ -35,13 +33,12 @@ export class SystemConfig {
     log_level: string;
 
     constructor(options?: any) {
-        const { requestLog, tmpDir, logDir, logWriteInterval, logFileExpires, publicDir, tmpFileExpires, requestBody, debug, log_level } = options || {};
+        const { requestLog, tmpDir, logDir, logWriteInterval, logFileExpires, tmpFileExpires, requestBody, debug, log_level } = options || {};
         this.requestLog = _.defaultTo(requestLog, false);
         this.tmpDir = _.defaultTo(tmpDir, './tmp');
         this.logDir = _.defaultTo(logDir, './logs');
         this.logWriteInterval = _.defaultTo(logWriteInterval, 200);
         this.logFileExpires = _.defaultTo(logFileExpires, 2626560000);
-        this.publicDir = _.defaultTo(publicDir, './public');
         this.tmpFileExpires = _.defaultTo(tmpFileExpires, 86400000);
         this.requestBody = Object.assign(requestBody || {}, {
             enableTypes: ['form', 'text', 'xml'],  // 移除 json，由自定义中间件处理
@@ -70,10 +67,6 @@ export class SystemConfig {
 
     get logDirPath() {
         return path.resolve(this.logDir);
-    }
-
-    get publicDirPath() {
-        return path.resolve(this.publicDir);
     }
 
     static load() {

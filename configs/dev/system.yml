@@ -8,8 +8,6 @@ logDir: ./logs
 logWriteInterval: 200
 # 日志文件有效期（毫秒）
 logFileExpires: 2626560000
-# 公共目录路径
-publicDir: ./public
 # 临时文件有效期（毫秒）
 tmpFileExpires: 86400000
 # 日志级别

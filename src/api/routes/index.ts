@@ -1,5 +1,3 @@
-import fs from 'fs-extra';
-
 import Response from '@/lib/response/Response.ts';
 import images from "./images.ts";
 import chat from "./chat.ts";
@@ -12,13 +10,21 @@ export default [
     {
         get: {
             '/': async () => {
-                const content = await fs.readFile('public/welcome.html');
-                return new Response(content, {
-                    type: 'html',
-                    headers: {
-                        Expires: '-1'
+                return {
+                    service: 'jimeng-api',
+                    status: 'running',
+                    version: '1.6.3',
+                    description: '免费的AI图像和视频生成API服务 - 基于即梦AI的逆向工程实现',
+                    documentation: 'https://github.com/iptag/jimeng-api',
+                    endpoints: {
+                        images: '/v1/images/generations',
+                        compositions: '/v1/images/compositions',
+                        videos: '/v1/videos/generations',
+                        chat: '/v1/chat/completions',
+                        models: '/v1/models',
+                        health: '/ping'
                     }
-                });
+                };
             }
         }
     },
