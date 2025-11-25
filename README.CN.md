@@ -259,7 +259,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ```
 
 **支持的模型**:
-- `nanobanapro`: 仅国际站支持，支持ration和resolution参数
+- `nanobanapro`: 仅国际站支持，支持`ratio` 和`resolution`参数
 - `nanobanana`: 仅国际站支持
 - `jimeng-4.0`: 国内、国际站均支持
 - `jimeng-3.1`: 仅国内站支持

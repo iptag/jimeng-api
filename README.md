@@ -247,7 +247,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ```
 
 **Supported Models**:
-- `nanobanapro`: Only supported on the international site, supporting `ratio` and 'resolution'.
+- `nanobanapro`: Only supported on the international site, supporting `ratio` and `resolution`.
 - `nanobanana`: Only supported on the international site.
 - `jimeng-4.0`: Supported on both domestic and international sites.
 - `jimeng-3.1`: Only supported on the domestic site.
