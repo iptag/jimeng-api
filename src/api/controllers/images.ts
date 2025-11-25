@@ -78,11 +78,11 @@ export async function generateImageComposition(
   let width, height, image_ratio, resolution_type;
 
   if (_model === 'nanobanana') {
-    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和2k的清晰度，您输入的参数将被忽略。');
+    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和4k的清晰度，您输入的参数将被忽略。');
     width = 1024;
     height = 1024;
     image_ratio = 1;
-    resolution_type = '2k';
+    resolution_type = '4k';
   } else {
     const params = getResolutionParams(resolution, ratio);
     width = params.width;
@@ -144,6 +144,10 @@ export async function generateImageComposition(
     intelligent_ratio: intelligentRatio,
   };
 
+  if (_model === 'nanobanana') {
+    core_param.large_image_info.min_version = '3.3.2';
+  }
+
   const { aigc_data } = await request(
     "post",
     "/mweb/v1/aigc_draft/generate",
@@ -160,6 +164,19 @@ export async function generateImageComposition(
           promptSource: "custom",
           generateCount: 1,
           enterFrom: "click",
+          sceneOptions: JSON.stringify([{
+            type: "image",
+            scene: "ImageBlend",  // 图生图场景
+            modelReqKey: model,
+            resolutionType: resolution_type,
+            abilityList: [],
+            reportParams: {
+              enterSource: "generate",
+              vipSource: "generate",
+              extraVipFunctionKey: `${model}-${resolution_type}`,
+              useVipFunctionDetailsReporterHoc: true
+            }
+          }]),
           generateId: submitId,
           isRegenerate: false
         }),
@@ -368,11 +385,11 @@ async function generateImagesInternal(
   let width, height, image_ratio, resolution_type;
 
   if (_model === 'nanobanana') {
-    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和2k的清晰度，您输入的参数将被忽略。');
+    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和4k的清晰度，您输入的参数将被忽略。');
     width = 1024;
     height = 1024;
     image_ratio = 1;
-    resolution_type = '2k';
+    resolution_type = '4k';
   } else {
     const params = getResolutionParams(resolution, ratio);
     width = params.width;
@@ -418,6 +435,10 @@ async function generateImagesInternal(
     intelligent_ratio: intelligentRatio
   };
 
+  if (_model === 'nanobanana') {
+    core_param.large_image_info.min_version = '3.3.2';
+  }
+
   // 智能比例模式下不包含 image_ratio 字段
   if (!intelligentRatio) {
     core_param.image_ratio = image_ratio;
@@ -439,6 +460,19 @@ async function generateImagesInternal(
           promptSource: "custom",
           generateCount: 1,
           enterFrom: "click",
+          sceneOptions: JSON.stringify([{
+            type: "image",
+            scene: "ImageBasicGenerate",
+            modelReqKey: model,
+            resolutionType: resolution_type,
+            abilityList: [],
+            reportParams: {
+              enterSource: "generate",
+              vipSource: "generate",
+              extraVipFunctionKey: `${model}-${resolution_type}`,
+              useVipFunctionDetailsReporterHoc: true
+            }
+          }]),
           generateId: util.uuid(),
           isRegenerate: false
         }),
@@ -614,6 +648,19 @@ async function generateJimeng40MultiImages(
           templateSource: "",
           lastRequestId: "",
           originRequestId: "",
+          sceneOptions: JSON.stringify([{
+            type: "image",
+            scene: "ImageMultiGenerate",
+            modelReqKey: model,
+            resolutionType: resolution_type,
+            abilityList: [],
+            reportParams: {
+              enterSource: "generate",
+              vipSource: "generate",
+              extraVipFunctionKey: `${model}-${resolution_type}`,
+              useVipFunctionDetailsReporterHoc: true
+            }
+          }]),
         }),
         draft_content: JSON.stringify({
           type: "draft",
