@@ -56,7 +56,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **日本站**：需要添加 **jp-** 前缀，如 `Bearer jp-your_session_id`
 > - **新加坡站**: 需要添加 **sg-** 前缀，如 `Bearer sg-your_session_id`
 >
-> **注意2**: 国内站和国际站现已同时支持*文生图*和*图生图*，国际站添加nanobanana和nanobanapro模型。
+> **注意2**: 国内站和国际站现已同时支持*文生图*和*图生图*，国际站添加nanobanana和nanobananapro模型。
 >
 > **注意3**: 国际站使用nanobanana模型时，生成的图像都将固定为 **1024x1024** 和 **4k**，与官方保持一致。
 
@@ -259,7 +259,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ```
 
 **支持的模型**:
-- `nanobanapro`: 仅国际站支持，支持`ratio` 和`resolution`参数
+- `nanobananapro`: 仅国际站支持，支持`ratio` 和`resolution`参数
 - `nanobanana`: 仅国际站支持
 - `jimeng-4.0`: 国内、国际站均支持
 - `jimeng-3.1`: 仅国内站支持
