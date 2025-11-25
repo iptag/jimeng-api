@@ -54,9 +54,9 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **Japan site**: Add **jp-** prefix, e.g., `Bearer jp-your_session_id`
 > - **Singapore site**: Add **sg-** prefix, e.g., `Bearer sg-your_session_id`
 >
-> **Note 2**: Domestic and international sites now support both *text-to-image* and *image-to-image*. The nanobanana model has been added for the international site.
+> **Note 2**: Domestic and international sites now support both *text-to-image* and *image-to-image*. The nanobanana and nanobanapro models have been added for the international site.
 >
-> **Note 3**: When using the nanobanana model on the international site, the generated images will be fixed at **1024x1024** and **2k**, consistent with the official settings.
+> **Note 3**: When using the nanobanana model on the international site, the generated images will be fixed at **1024x1024** and **4k**, consistent with the official settings.
 
 ![](https://github.com/iptag/jimeng-api/blob/main/get_sessionid.png)
 
@@ -247,6 +247,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ```
 
 **Supported Models**:
+- `nanobanapro`: Only supported on the international site, supporting `ratio` and 'resolution'.
 - `nanobanana`: Only supported on the international site.
 - `jimeng-4.0`: Supported on both domestic and international sites.
 - `jimeng-3.1`: Only supported on the domestic site.
