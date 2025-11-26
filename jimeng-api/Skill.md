@@ -37,6 +37,11 @@ Use this skill when users request:
    - 日本站: Add `jp-` prefix (e.g., `jp-your_session_id`)
    - 新加坡站: Add `sg-` prefix (e.g., `sg-your_session_id`)
 
+**⚠️ nanobanana Model Resolution Rules**:
+   - **US site (us-)**: Fixed at 1024×1024 with 2k resolution; ignores user-provided `ratio` and `resolution` parameters
+   - **HK/JP/SG sites (hk-/jp-/sg-)**: Forced 1k resolution, but supports custom `ratio` parameters (e.g., 16:9, 4:3)
+   - **Domestic site (CN)**: Does not support nanobanana model; use jimeng series instead
+
 **Always ask the user for their Session ID before proceeding**, as the skill does not include a pre-configured credential.
 
 Example prompt to user:
@@ -107,7 +112,7 @@ python scripts/generate_image.py text \
   - Options: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`
 - `--resolution`: Resolution level (default: `2k`)
   - Options: `1k`, `2k`, `4k`
-- `--intelligent-ratio`: Enable smart ratio detection based on prompt keywords
+- `--intelligent-ratio`: Enable smart ratio detection based on prompt keywords **⚠️ Only works for jimeng-4.0 model; other models will ignore this parameter**
 - `--negative-prompt`: Negative prompt (elements to avoid)
 - `--sample-strength`: Sampling strength (0.0-1.0)
 - `--api-url`: Custom API URL (default: `http://localhost:5100`)
@@ -150,6 +155,8 @@ python scripts/generate_image.py image \
 
 ### Intelligent Ratio Detection
 
+**⚠️ IMPORTANT**: This feature only works with the `jimeng-4.0` model. Other models (jimeng-3.0, nanobanana, etc.) will ignore the `--intelligent-ratio` flag.
+
 Use `--intelligent-ratio` to automatically select the best aspect ratio based on prompt keywords.
 
 **Example:**
@@ -157,6 +164,7 @@ Use `--intelligent-ratio` to automatically select the best aspect ratio based on
 python scripts/generate_image.py text \
     "奔跑的狮子,竖屏" \
     --session-id "YOUR_SESSION_ID" \
+    --model "jimeng-4.0" \
     --intelligent-ratio
 ```
 
@@ -164,8 +172,14 @@ python scripts/generate_image.py text \
 
 | Resolution | Ratio | Dimensions |
 |------------|-------|------------|
-| **1k** | 1:1 | 1328×1328 |
-|  | 16:9 | 1664×936 |
+| **1k** | 1:1 | 1024×1024 |
+|  | 4:3 | 768×1024 |
+|  | 3:4 | 1024×768 |
+|  | 16:9 | 1024×576 |
+|  | 9:16 | 576×1024 |
+|  | 3:2 | 1024×682 |
+|  | 2:3 | 682×1024 |
+|  | 21:9 | 1195×512 |
 | **2k** (default) | 1:1 | 2048×2048 |
 |  | 16:9 | 2560×1440 |
 |  | 4:3 | 2304×1728 |
@@ -255,6 +269,16 @@ Script executes:
 **"Model not supported"**
 - `nanobanana` only works with international sites (us-/hk-/jp-/sg- prefix)
 - `jimeng-3.1` and `jimeng-2.1` only work with domestic sites
+
+**"nanobanana resolution mismatch"**
+- **US site (us- prefix)**: nanobanana model only supports 1024×1024 @ 2k resolution; all `ratio` and `resolution` parameters are ignored
+- **HK/JP/SG sites (hk-/jp-/sg- prefix)**: nanobanana model forces 1k resolution, but allows custom ratios (e.g., 16:9, 4:3)
+- If you need full control over resolution and ratio, use `jimeng-4.0` model instead
+
+**"intelligent_ratio not working"**
+- The `--intelligent-ratio` flag only works with `jimeng-4.0` model
+- Other models (jimeng-3.0, nanobanana, etc.) will ignore this parameter
+- Solution: Use `jimeng-4.0` if you need intelligent ratio detection
 
 ## Best Practices
 

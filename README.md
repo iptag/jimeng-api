@@ -56,7 +56,9 @@ curl -X POST http://localhost:5100/v1/images/generations \
 >
 > **Note 2**: Domestic and international sites now support both *text-to-image* and *image-to-image*. The nanobanana and nanobananapro models have been added for the international site.
 >
-> **Note 3**: When using the nanobanana model on the international site, the generated images will be fixed at **1024x1024** and **4k**, consistent with the official settings.
+> **Note 3**: Resolution rules when using the nanobanana model on international sites:
+> - **US site (us-)**: Images are fixed at **1024x1024** with **2k** resolution, ignoring user-provided ratio and resolution parameters
+> - **Hong Kong/Japan/Singapore sites (hk-/jp-/sg-)**: Fixed **1k** resolution, but supports custom ratio parameters (e.g., 16:9, 4:3, etc.)
 
 ![](https://github.com/iptag/jimeng-api/blob/main/get_sessionid.png)
 
@@ -218,7 +220,7 @@ For detailed usage, please refer to `jimeng-api/Skill.md`.
 - `prompt` (string): The text description of the image.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. **Note**: When `intelligent_ratio` is `true`, this parameter will be ignored and the system will automatically infer the optimal ratio from the prompt.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
-- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. When enabled, the system automatically infers the optimal image ratio from the prompt (e.g., "portrait" → 9:16, "landscape" → 16:9).
+- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0 model; other models will ignore it.** When enabled, the system automatically infers the optimal image ratio from the prompt (e.g., "portrait" → 9:16, "landscape" → 16:9).
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").
@@ -258,14 +260,14 @@ curl -X POST http://localhost:5100/v1/images/generations \
 **Supported Ratios and Corresponding Resolutions**:
 | resolution | ratio | Resolution |
 |---|---|---|
-| `1k` | `1:1` | 1328×1328 |
-| | `4:3` | 1472×1104 |
-| | `3:4` | 1104×1472 |
-| | `16:9` | 1664×936 |
-| | `9:16` | 936×1664 |
-| | `3:2` | 1584×1056 |
-| | `2:3` | 1056×1584 |
-| | `21:9` | 2016×864 |
+| `1k` | `1:1` | 1024×1024 |
+| | `4:3` | 768×1024 |
+| | `3:4` | 1024×768 |
+| | `16:9` | 1024×576 |
+| | `9:16` | 576×1024 |
+| | `3:2` | 1024×682 |
+| | `2:3` | 682×1024 |
+| | `21:9` | 1195×512 |
 | `2k` (default) | `1:1` | 2048×2048 |
 | | `4:3` | 2304×1728 |
 | | `3:4` | 1728×2304 |
@@ -307,7 +309,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 - `images` (array): An array of input images.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
-- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. When enabled, the system automatically adjusts the output ratio based on the prompt and input images.
+- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0 model; other models will ignore it.** When enabled, the system automatically adjusts the output ratio based on the prompt and input images.
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").

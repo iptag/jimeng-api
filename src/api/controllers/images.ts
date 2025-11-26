@@ -64,16 +64,37 @@ export async function generateImageComposition(
   const regionInfo = parseRegionFromToken(refreshToken);
   const { isInternational } = regionInfo;
   const model = getModel(_model, isInternational);
-  
+
   let width, height, image_ratio, resolution_type;
 
+  // nanobanana 模型的站点差异处理
   if (_model === 'nanobanana') {
-    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和4k的清晰度，您输入的参数将被忽略。');
-    width = 1024;
-    height = 1024;
-    image_ratio = 1;
-    resolution_type = '4k';
+    if (regionInfo.isUS) {
+      // US 站: 强制 1024x1024@2k, ratio 固定为 1
+      logger.warn('美区 nanobanana 模型固定使用1024x1024分辨率和2k的清晰度，比例固定为1:1。');
+      width = 1024;
+      height = 1024;
+      image_ratio = 1;
+      resolution_type = '2k';
+    } else if (regionInfo.isHK || regionInfo.isJP || regionInfo.isSG) {
+      // HK/JP/SG 站: 强制 1k 分辨率，但 ratio 可自定义
+      const regionName = regionInfo.isHK ? '香港' : regionInfo.isJP ? '日本' : '新加坡';
+      logger.warn(`${regionName}站 nanobanana 模型固定使用1k清晰度，可使用自定义比例${ratio}。`);
+      const params = getResolutionParams('1k', ratio);
+      width = params.width;
+      height = params.height;
+      image_ratio = params.image_ratio;
+      resolution_type = '1k';
+    } else {
+      // 其他站点 (理论上CN站已在前面被拦截)
+      const params = getResolutionParams(resolution, ratio);
+      width = params.width;
+      height = params.height;
+      image_ratio = params.image_ratio;
+      resolution_type = params.resolution_type;
+    }
   } else {
+    // 其他模型: 使用用户指定的分辨率和比例
     const params = getResolutionParams(resolution, ratio);
     width = params.width;
     height = params.height;
@@ -117,6 +138,12 @@ export async function generateImageComposition(
   const componentId = util.uuid();
   const submitId = util.uuid();
 
+  // ⚠️ intelligent_ratio 仅对 jimeng-4.0 模型有效
+  const effectiveIntelligentRatio = (_model === 'jimeng-4.0') ? intelligentRatio : false;
+  if (intelligentRatio && _model !== 'jimeng-4.0') {
+    logger.warn(`intelligent_ratio 参数仅对 jimeng-4.0 模型有效，${_model} 模型将忽略此参数`);
+  }
+
   const core_param = {
     type: "",
     id: util.uuid(),
@@ -131,12 +158,8 @@ export async function generateImageComposition(
       width: width,
       resolution_type: resolution_type
     },
-    intelligent_ratio: intelligentRatio,
+    intelligent_ratio: effectiveIntelligentRatio,
   };
-
-  if (_model === 'nanobanana') {
-    core_param.large_image_info.min_version = '3.3.2';
-  }
 
   const { aigc_data } = await request(
     "post",
@@ -156,10 +179,18 @@ export async function generateImageComposition(
           enterFrom: "click",
           sceneOptions: JSON.stringify([{
             type: "image",
-            scene: "ImageBlend",  // 图生图场景
+            scene: "ImageBasicGenerate",  // 图生图也使用 ImageBasicGenerate
             modelReqKey: model,
             resolutionType: resolution_type,
-            abilityList: [],
+            abilityList: [{
+              abilityName: "byte_edit",
+              strength: sampleStrength
+            }],
+            // benefitCount 规则:
+            // - 美区: 仅 jimeng-4.0 等非 nano 模型需要
+            // - HK/JP/SG: 除了 nanobanana，其他都需要
+            ...((regionInfo.isHK || regionInfo.isJP || regionInfo.isSG) && _model !== 'nanobanana' && { benefitCount: 4 }),
+            ...(regionInfo.isUS && _model !== 'nanobanana' && _model !== 'nanobananapro' && { benefitCount: 4 }),
             reportParams: {
               enterSource: "generate",
               vipSource: "generate",
@@ -229,14 +260,13 @@ export async function generateImageComposition(
                     type: "",
                     id: util.uuid(),
                     generate_type: 0
-                  },
-
-                  gen_option: {
-                    type: "",
-                    id: util.uuid(),
-                    generate_all: false
                   }
                 },
+                gen_option: {
+                  type: "",
+                  id: util.uuid(),
+                  generate_all: false
+                }
               },
             },
           ],
@@ -366,16 +396,37 @@ async function generateImagesInternal(
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
   const model = getModel(_model, regionInfo.isInternational);
-  
+
   let width, height, image_ratio, resolution_type;
 
+  // nanobanana 模型的站点差异处理
   if (_model === 'nanobanana') {
-    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和4k的清晰度，您输入的参数将被忽略。');
-    width = 1024;
-    height = 1024;
-    image_ratio = 1;
-    resolution_type = '4k';
+    if (regionInfo.isUS) {
+      // US 站: 强制 1024x1024@2k, ratio 固定为 1
+      logger.warn('美区 nanobanana 模型固定使用1024x1024分辨率和2k的清晰度，比例固定为1:1。');
+      width = 1024;
+      height = 1024;
+      image_ratio = 1;
+      resolution_type = '2k';
+    } else if (regionInfo.isHK || regionInfo.isJP || regionInfo.isSG) {
+      // HK/JP/SG 站: 强制 1k 分辨率，但 ratio 可自定义
+      const regionName = regionInfo.isHK ? '香港' : regionInfo.isJP ? '日本' : '新加坡';
+      logger.warn(`${regionName}站 nanobanana 模型固定使用1k清晰度，可使用自定义比例${ratio}。`);
+      const params = getResolutionParams('1k', ratio);
+      width = params.width;
+      height = params.height;
+      image_ratio = params.image_ratio;
+      resolution_type = '1k';
+    } else {
+      // 其他站点 (理论上CN站已在前面被拦截)
+      const params = getResolutionParams(resolution, ratio);
+      width = params.width;
+      height = params.height;
+      image_ratio = params.image_ratio;
+      resolution_type = params.resolution_type;
+    }
   } else {
+    // 其他模型: 使用用户指定的分辨率和比例
     const params = getResolutionParams(resolution, ratio);
     width = params.width;
     height = params.height;
@@ -402,6 +453,12 @@ async function generateImagesInternal(
 
   const componentId = util.uuid();
 
+  // ⚠️ intelligent_ratio 仅对 jimeng-4.0 模型有效
+  const effectiveIntelligentRatio = (_model === 'jimeng-4.0') ? intelligentRatio : false;
+  if (intelligentRatio && _model !== 'jimeng-4.0') {
+    logger.warn(`intelligent_ratio 参数仅对 jimeng-4.0 模型有效，${_model} 模型将忽略此参数`);
+  }
+
   const core_param: any = {
     type: "",
     id: util.uuid(),
@@ -417,17 +474,15 @@ async function generateImagesInternal(
       width: width,
       resolution_type: resolution_type
     },
-    intelligent_ratio: intelligentRatio
+    intelligent_ratio: effectiveIntelligentRatio
   };
 
-  if (_model === 'nanobanana') {
-    core_param.large_image_info.min_version = '3.3.2';
-  }
-
-  // 智能比例模式下不包含 image_ratio 字段
-  if (!intelligentRatio) {
+  // 智能比例模式下不包含 image_ratio 字段（仅 jimeng-4.0）
+  if (!effectiveIntelligentRatio) {
     core_param.image_ratio = image_ratio;
   }
+
+  const submitId = util.uuid();
 
   const { aigc_data } = await request(
     "post",
@@ -440,7 +495,7 @@ async function generateImagesInternal(
         extend: {
           root_model: model,
         },
-        submit_id: util.uuid(),
+        submit_id: submitId,
         metrics_extra: JSON.stringify({
           promptSource: "custom",
           generateCount: 1,
@@ -451,6 +506,11 @@ async function generateImagesInternal(
             modelReqKey: model,
             resolutionType: resolution_type,
             abilityList: [],
+            // benefitCount 规则:
+            // - 美区: 仅 jimeng-4.0 等非 nano 模型需要
+            // - HK/JP/SG: 除了 nanobanana，其他都需要
+            ...((regionInfo.isHK || regionInfo.isJP || regionInfo.isSG) && _model !== 'nanobanana' && { benefitCount: 4 }),
+            ...(regionInfo.isUS && _model !== 'nanobanana' && _model !== 'nanobananapro' && { benefitCount: 4 }),
             reportParams: {
               enterSource: "generate",
               vipSource: "generate",
@@ -458,7 +518,7 @@ async function generateImagesInternal(
               useVipFunctionDetailsReporterHoc: true
             }
           }]),
-          generateId: util.uuid(),
+          generateId: submitId,
           isRegenerate: false
         }),
         draft_content: JSON.stringify({
@@ -677,6 +737,9 @@ async function generateJimeng40MultiImages(
                   type: "",
                   id: util.uuid(),
                   core_param: (() => {
+                    // ⚠️ intelligent_ratio 仅对 jimeng-4.0 模型有效（此函数已确保是 jimeng-4.0）
+                    const effectiveIntelligentRatio = intelligentRatio;
+
                     const param: any = {
                       type: "",
                       id: util.uuid(),
@@ -692,10 +755,10 @@ async function generateJimeng40MultiImages(
                         width: width,
                         resolution_type: resolution_type
                       },
-                      intelligent_ratio: intelligentRatio
+                      intelligent_ratio: effectiveIntelligentRatio
                     };
                     // 智能比例模式下不包含 image_ratio 字段
-                    if (!intelligentRatio) {
+                    if (!effectiveIntelligentRatio) {
                       param.image_ratio = image_ratio;
                     }
                     return param;
