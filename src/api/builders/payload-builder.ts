@@ -131,7 +131,7 @@ export interface BuildCoreParamOptions {
   userModel: string;  // 用户模型名（如 'jimeng-4.0', 'nanobanana'）
   model: string;      // 映射后的内部模型名
   prompt: string;
-  promptPrefix?: string;
+  imageCount?: number;  // 图生图时的图片数量，用于生成动态 ## 前缀
   negativePrompt?: string;
   seed?: number;
   sampleStrength: number;
@@ -142,7 +142,7 @@ export interface BuildCoreParamOptions {
 
 /**
  * 构建 core_param
- * - 图生图: image_ratio 始终保留
+ * - 图生图: image_ratio 始终保留，prompt 前缀为 ## * imageCount
  * - 文生图: intelligent_ratio=true 时移除 image_ratio
  * - intelligent_ratio 仅对 jimeng-4.0 模型有效，其他模型忽略此参数
  */
@@ -151,7 +151,7 @@ export function buildCoreParam(options: BuildCoreParamOptions) {
     userModel,
     model,
     prompt,
-    promptPrefix = "",
+    imageCount = 0,
     negativePrompt,
     seed,
     sampleStrength,
@@ -162,6 +162,10 @@ export function buildCoreParam(options: BuildCoreParamOptions) {
 
   // ⚠️ intelligent_ratio 仅对 jimeng-4.0 模型有效
   const effectiveIntelligentRatio = (userModel === 'jimeng-4.0') ? intelligentRatio : false;
+
+  // 图生图时，prompt 前缀规则: 每张图片对应 2 个 #
+  // 1张图 → ##, 2张图 → ####, 3张图 → ######
+  const promptPrefix = mode === "img2img" ? '#'.repeat(imageCount * 2) : '';
 
   const coreParam: any = {
     type: "",
@@ -198,9 +202,17 @@ export function buildCoreParam(options: BuildCoreParamOptions) {
 
 export type SceneType = "ImageBasicGenerate" | "ImageMultiGenerate";
 
+/**
+ * metrics_extra 中 abilityList 的能力项
+ * - source.imageUrl: 前端使用 blob URL (如 blob:https://dreamina.capcut.com/[uuid])
+ * - 后端实现时需要生成占位符,保持 blob URL 格式
+ */
 interface Ability {
   abilityName: string;
   strength: number;
+  source?: {
+    imageUrl: string;  // 格式: blob:https://dreamina.capcut.com/[uuid]
+  };
 }
 
 export interface BuildMetricsExtraOptions {
@@ -273,6 +285,7 @@ export interface BuildDraftContentOptions {
   abilityList?: any[];
   promptPlaceholderInfoList?: any[];
   posteditParam?: any;
+  imageCount?: number;  // 图生图时的图片数量
 }
 
 export function buildDraftContent({
@@ -282,11 +295,18 @@ export function buildDraftContent({
   abilityList,
   promptPlaceholderInfoList,
   posteditParam,
+  imageCount = 0,
 }: BuildDraftContentOptions): string {
   const abilities: any = {
     type: "",
     id: util.uuid(),
   };
+
+  // 图生图时，draft 和 blend 的 min_version 规则:
+  // - draft.min_version: 始终为 "3.2.9"
+  // - blend.min_version: 仅当 imageCount >= 2 时添加 "3.2.9"
+  const isBlend = generateType === "blend";
+  const draftMinVersion = isBlend ? "3.2.9" : DRAFT_MIN_VERSION;
 
   if (generateType === "generate") {
     abilities.generate = {
@@ -303,6 +323,7 @@ export function buildDraftContent({
     abilities.blend = {
       type: "",
       id: util.uuid(),
+      ...(imageCount >= 2 ? { min_version: "3.2.9" } : {}),
       min_features: [],
       core_param: coreParam,
       ability_list: abilityList,
@@ -319,7 +340,7 @@ export function buildDraftContent({
   const draftContent = {
     type: "draft",
     id: util.uuid(),
-    min_version: DRAFT_MIN_VERSION,
+    min_version: draftMinVersion,
     min_features: [],
     is_from_tsn: true,
     version: DRAFT_VERSION,
@@ -363,17 +384,14 @@ export function buildGenerateRequest({
   metricsExtra,
 }: BuildGenerateRequestOptions) {
   return {
-    params: {},
-    data: {
-      extend: {
-        root_model: model,
-      },
-      submit_id: submitId,
-      metrics_extra: metricsExtra,
-      draft_content: draftContent,
-      http_common_info: {
-        aid: getAssistantId(regionInfo),
-      },
+    extend: {
+      root_model: model,
+    },
+    submit_id: submitId,
+    metrics_extra: metricsExtra,
+    draft_content: draftContent,
+    http_common_info: {
+      aid: getAssistantId(regionInfo),
     },
   };
 }

@@ -95,9 +95,10 @@ export class JimengErrorHandler {
     
     throw new APIException(EX.API_REQUEST_FAILED, `[${context}失败]: ${error.message}`);
   }
-  
+
   /**
    * 处理轮询超时错误
+   * @returns 如果有部分结果，返回 void 而不抛出异常
    */
   static handlePollingTimeout(
     pollCount: number,
@@ -106,32 +107,43 @@ export class JimengErrorHandler {
     status: number,
     itemCount: number,
     historyId?: string
-  ): never {
+  ): void {
     const message = `轮询超时: 已轮询 ${pollCount} 次，耗时 ${elapsedTime} 秒，最终状态: ${status}，图片数量: ${itemCount}`;
     logger.warn(message + (historyId ? `，历史ID: ${historyId}` : ''));
-    
+
     if (itemCount === 0) {
-      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, 
+      throw new APIException(EX.API_IMAGE_GENERATION_FAILED,
         `生成超时且无结果，状态码: ${status}${historyId ? `，历史ID: ${historyId}` : ''}`);
     }
-    
+
     // 如果有部分结果，不抛出异常，让调用者处理
     logger.info(`轮询超时但已获得 ${itemCount} 张图片，将返回现有结果`);
   }
   
   /**
    * 处理生成失败错误
+   * @param itemCount 已生成的结果数量，如果 > 0 则不抛出异常
+   * @returns 如果有部分结果，返回 false 表示不应抛出异常
    */
   static handleGenerationFailure(
     status: number,
     failCode: string | undefined,
     historyId?: string,
-    type: 'image' | 'video' = 'image'
-  ): never {
+    type: 'image' | 'video' = 'image',
+    itemCount: number = 0
+  ): boolean {
     const typeText = type === 'image' ? '图像' : '视频';
-    const message = `${typeText}生成最终失败: status=${status}, failCode=${failCode}${historyId ? `, historyId=${historyId}` : ''}`;
+    const message = `${typeText}生成最终失败: status=${status}, failCode=${failCode}${historyId ? `, historyId=${historyId}` : ''}, 已生成数量=${itemCount}`;
+
+    // 如果有部分结果，只记录警告，不抛出异常
+    if (itemCount > 0) {
+      logger.warn(message);
+      logger.info(`${typeText}生成部分失败，但已获得 ${itemCount} 个结果，将返回现有结果`);
+      return false; // 不抛出异常
+    }
+
+    // 没有任何结果时，记录错误并抛出异常
     logger.error(message);
-    
     const exception = type === 'image' ? EX.API_IMAGE_GENERATION_FAILED : EX.API_VIDEO_GENERATION_FAILED;
     throw new APIException(exception, `${typeText}生成失败，状态码: ${status}${failCode ? `，错误码: ${failCode}` : ''}`);
   }
