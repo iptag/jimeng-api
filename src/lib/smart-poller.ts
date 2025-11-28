@@ -180,12 +180,12 @@ export class SmartPoller {
         
         if (shouldExit) {
           logger.info(`退出轮询: ${reason}, 最终${this.options.type === 'image' ? '图片' : '视频'}数量=${status.itemCount}`);
-          
-          // 处理失败情况
+
+          // 处理失败情况 (如果有部分结果，handleGenerationFailure 会返回 false 而不抛出异常)
           if (status.status === 30) {
-            handleGenerationFailure(status.status, status.failCode, historyId, this.options.type);
+            handleGenerationFailure(status.status, status.failCode, historyId, this.options.type, status.itemCount);
           }
-          
+
           // 处理超时情况
           if (reason === '轮询次数超限' || reason === '时间超限但已有结果') {
             handlePollingTimeout(
@@ -197,7 +197,7 @@ export class SmartPoller {
               historyId
             );
           }
-          
+
           break;
         }
         

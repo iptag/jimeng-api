@@ -6,33 +6,26 @@ import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request, parseRegionFromToken, getAssistantId, RegionInfo } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
-import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_ASSISTANT_ID_SG, DEFAULT_IMAGE_MODEL, DRAFT_VERSION, DRAFT_MIN_VERSION, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US, RESOLUTION_OPTIONS } from "@/api/consts/common.ts";
-import { WEB_VERSION as DREAMINA_WEB_VERSION, DA_VERSION as DREAMINA_DA_VERSION, AIGC_FEATURES as DREAMINA_AIGC_FEATURES } from "@/api/consts/dreamina.ts";
+import { DEFAULT_IMAGE_MODEL, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US } from "@/api/consts/common.ts";
 import { uploadImageFromUrl, uploadImageBuffer } from "@/lib/image-uploader.ts";
 import { extractImageUrls } from "@/lib/image-utils.ts";
+import {
+  resolveResolution,
+  getBenefitCount,
+  buildCoreParam,
+  buildMetricsExtra,
+  buildDraftContent,
+  buildGenerateRequest,
+  buildBlendAbilityList,
+  buildPromptPlaceholderList,
+  ResolutionResult,
+} from "@/api/builders/payload-builder.ts";
 
 export const DEFAULT_MODEL = DEFAULT_IMAGE_MODEL;
 
-function getResolutionParams(resolution: string = '2k', ratio: string = '1:1'): { width: number; height: number; image_ratio: number; resolution_type: string } {
-  const resolutionGroup = RESOLUTION_OPTIONS[resolution];
-  if (!resolutionGroup) {
-    const supportedResolutions = Object.keys(RESOLUTION_OPTIONS).join(', ');
-    throw new Error(`不支持的分辨率 "${resolution}"。支持的分辨率: ${supportedResolutions}`);
-  }
-
-  const ratioConfig = resolutionGroup[ratio];
-  if (!ratioConfig) {
-    const supportedRatios = Object.keys(resolutionGroup).join(', ');
-    throw new Error(`在 "${resolution}" 分辨率下，不支持的比例 "${ratio}"。支持的比例: ${supportedRatios}`);
-  }
-
-  return {
-    width: ratioConfig.width,
-    height: ratioConfig.height,
-    image_ratio: ratioConfig.ratio,
-    resolution_type: resolution,
-  };
-}
+/**
+ * 获取模型映射
+ */
 export function getModel(model: string, isInternational: boolean) {
   const modelMap = isInternational ? IMAGE_MODEL_MAP_US : IMAGE_MODEL_MAP;
   if (isInternational && !modelMap[model]) {
@@ -42,6 +35,25 @@ export function getModel(model: string, isInternational: boolean) {
   return modelMap[model] || modelMap[DEFAULT_MODEL];
 }
 
+/**
+ * 记录分辨率信息
+ */
+function logResolutionInfo(_model: string, resolution: ResolutionResult, regionInfo: RegionInfo) {
+  if (!resolution.isForced) return;
+
+  if (_model === 'nanobanana') {
+    if (regionInfo.isUS) {
+      logger.warn('美区 nanobanana 模型固定使用1024x1024分辨率和2k的清晰度，比例固定为1:1。');
+    } else if (regionInfo.isHK || regionInfo.isJP || regionInfo.isSG) {
+      const regionName = regionInfo.isHK ? '香港' : regionInfo.isJP ? '日本' : '新加坡';
+      logger.warn(`${regionName}站 nanobanana 模型固定使用1k清晰度。`);
+    }
+  }
+}
+
+/**
+ * 图生图
+ */
 export async function generateImageComposition(
   _model: string,
   prompt: string,
@@ -72,28 +84,16 @@ export async function generateImageComposition(
   }
 
   const regionInfo = parseRegionFromToken(refreshToken);
-  const { isInternational } = regionInfo;
-  const model = getModel(_model, isInternational);
-  
-  let width, height, image_ratio, resolution_type;
+  const model = getModel(_model, regionInfo.isInternational);
 
-  if (_model === 'nanobanana') {
-    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和4k的清晰度，您输入的参数将被忽略。');
-    width = 1024;
-    height = 1024;
-    image_ratio = 1;
-    resolution_type = '4k';
-  } else {
-    const params = getResolutionParams(resolution, ratio);
-    width = params.width;
-    height = params.height;
-    image_ratio = params.image_ratio;
-    resolution_type = params.resolution_type;
-  }
+  // 使用 payload-builder 处理分辨率
+  const resolutionResult = resolveResolution(_model, regionInfo, resolution, ratio);
+  logResolutionInfo(_model, resolutionResult, regionInfo);
 
   const imageCount = images.length;
-  logger.info(`使用模型: ${_model} 映射模型: ${model} 图生图功能 ${imageCount}张图片 ${width}x${height} 精细度: ${sampleStrength}`);
+  logger.info(`使用模型: ${_model} 映射模型: ${model} 图生图功能 ${imageCount}张图片 ${resolutionResult.width}x${resolutionResult.height} 精细度: ${sampleStrength}`);
 
+  // 获取积分
   try {
     const { totalCredit } = await getCredit(refreshToken);
     if (totalCredit <= 0)
@@ -102,6 +102,7 @@ export async function generateImageComposition(
     logger.warn(`获取积分失败，可能是不支持的区域或token已失效: ${e.message}`);
   }
 
+  // 上传图片
   const uploadedImageIds: string[] = [];
   for (let i = 0; i < images.length; i++) {
     try {
@@ -127,135 +128,70 @@ export async function generateImageComposition(
   const componentId = util.uuid();
   const submitId = util.uuid();
 
-  const core_param = {
+  // 使用 payload-builder 构建 core_param
+  const coreParam = buildCoreParam({
+    userModel: _model,
+    model,
+    prompt,
+    imageCount,
+    sampleStrength,
+    resolution: resolutionResult,
+    intelligentRatio,
+    mode: "img2img",
+  });
+
+  // 构建 metrics_extra 中的 abilityList
+  const metricsAbilityList = uploadedImageIds.map(() => ({
+    abilityName: "byte_edit",
+    strength: sampleStrength,
+    source: {
+      imageUrl: `blob:https://dreamina.capcut.com/${util.uuid()}`
+    }
+  }));
+
+  // 使用 payload-builder 构建 metrics_extra
+  const metricsExtra = buildMetricsExtra({
+    userModel: _model,
+    regionInfo,
+    submitId,
+    scene: "ImageBasicGenerate",
+    resolutionType: resolutionResult.resolutionType,
+    abilityList: metricsAbilityList,
+  });
+
+  // 使用 payload-builder 构建 draft_content
+  const abilityList = buildBlendAbilityList(uploadedImageIds, sampleStrength);
+  const promptPlaceholderInfoList = buildPromptPlaceholderList(uploadedImageIds.length);
+  const posteditParam = {
     type: "",
     id: util.uuid(),
-    model,
-    prompt: `##${prompt}`,
-    sample_strength: sampleStrength,
-    image_ratio: image_ratio,
-    large_image_info: {
-      type: "",
-      id: util.uuid(),
-      height: height,
-      width: width,
-      resolution_type: resolution_type
-    },
-    intelligent_ratio: intelligentRatio,
+    generate_type: 0
   };
 
-  if (_model === 'nanobanana') {
-    core_param.large_image_info.min_version = '3.3.2';
-  }
+  const draftContent = buildDraftContent({
+    componentId,
+    generateType: "blend",
+    coreParam,
+    abilityList,
+    promptPlaceholderInfoList,
+    posteditParam,
+    imageCount,
+  });
+
+  // 使用 payload-builder 构建完整请求
+  const requestData = buildGenerateRequest({
+    model,
+    regionInfo,
+    submitId,
+    draftContent,
+    metricsExtra,
+  });
 
   const { aigc_data } = await request(
     "post",
     "/mweb/v1/aigc_draft/generate",
     refreshToken,
-    {
-      params: {
-      },
-      data: {
-        extend: {
-          root_model: model,
-        },
-        submit_id: submitId,
-        metrics_extra: JSON.stringify({
-          promptSource: "custom",
-          generateCount: 1,
-          enterFrom: "click",
-          sceneOptions: JSON.stringify([{
-            type: "image",
-            scene: "ImageBlend",  // 图生图场景
-            modelReqKey: model,
-            resolutionType: resolution_type,
-            abilityList: [],
-            reportParams: {
-              enterSource: "generate",
-              vipSource: "generate",
-              extraVipFunctionKey: `${model}-${resolution_type}`,
-              useVipFunctionDetailsReporterHoc: true
-            }
-          }]),
-          generateId: submitId,
-          isRegenerate: false
-        }),
-        draft_content: JSON.stringify({
-          type: "draft",
-          id: util.uuid(),
-          min_version: DRAFT_MIN_VERSION,
-          min_features: [],
-          is_from_tsn: true,
-          version: DRAFT_VERSION,
-          main_component_id: componentId,
-          component_list: [
-            {
-              type: "image_base_component",
-              id: componentId,
-              min_version: DRAFT_MIN_VERSION,
-              aigc_mode: "workbench",
-              metadata: {
-                type: "",
-                id: util.uuid(),
-                created_platform: 3,
-                created_platform_version: "",
-                created_time_in_ms: Date.now().toString(),
-                created_did: "",
-              },
-              generate_type: "blend",
-              abilities: {
-                type: "",
-                id: util.uuid(),
-                blend: {
-                  type: "",
-                  id: util.uuid(),
-                  min_features: [],
-                  core_param: core_param,
-                  ability_list: uploadedImageIds.map((imageId) => ({
-                    type: "",
-                    id: util.uuid(),
-                    name: "byte_edit",
-                    image_uri_list: [imageId],
-                    image_list: [{
-                      type: "image",
-                      id: util.uuid(),
-                      source_from: "upload",
-                      platform_type: 1,
-                      name: "",
-                      image_uri: imageId,
-                      width: 0,
-                      height: 0,
-                      format: "",
-                      uri: imageId
-                    }],
-                    strength: sampleStrength
-                  })),
-                  prompt_placeholder_info_list: uploadedImageIds.map((_, index) => ({
-                    type: "",
-                    id: util.uuid(),
-                    ability_index: index
-                  })),
-                  postedit_param: {
-                    type: "",
-                    id: util.uuid(),
-                    generate_type: 0
-                  },
-
-                  gen_option: {
-                    type: "",
-                    id: util.uuid(),
-                    generate_all: false
-                  }
-                },
-              },
-            },
-          ],
-        }),
-        http_common_info: {
-          aid: getAssistantId(regionInfo)
-        }
-      },
-    }
+    { data: requestData }
   );
 
   const historyId = aigc_data?.history_record_id;
@@ -264,10 +200,9 @@ export async function generateImageComposition(
 
   logger.info(`图生图任务已提交，history_id: ${historyId}，等待生成完成...`);
 
-  const maxPollCount = 900;
-
+  // 轮询结果
   const poller = new SmartPoller({
-    maxPollCount,
+    maxPollCount: 900,
     expectedItemCount: 1,
     type: 'image'
   });
@@ -301,17 +236,12 @@ export async function generateImageComposition(
     }
 
     const taskInfo = response[historyId];
-    const currentStatus = taskInfo.status;
-    const currentFailCode = taskInfo.fail_code;
-    const currentItemList = taskInfo.item_list || [];
-    const finishTime = taskInfo.task?.finish_time || 0;
-
     return {
       status: {
-        status: currentStatus,
-        failCode: currentFailCode,
-        itemCount: currentItemList.length,
-        finishTime,
+        status: taskInfo.status,
+        failCode: taskInfo.fail_code,
+        itemCount: (taskInfo.item_list || []).length,
+        finishTime: taskInfo.task?.finish_time || 0,
         historyId
       } as PollingStatus,
       data: taskInfo
@@ -322,7 +252,7 @@ export async function generateImageComposition(
   const resultImageUrls = extractImageUrls(item_list);
 
   if (resultImageUrls.length === 0 && item_list.length > 0) {
-    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图生图失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图生图失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
   }
 
   logger.info(`图生图结果: 成功生成 ${resultImageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
@@ -330,7 +260,9 @@ export async function generateImageComposition(
   return resultImageUrls;
 }
 
-// ... (rest of the file is for text-to-image, can be left as is for now)
+/**
+ * 文生图入口
+ */
 export async function generateImages(
   _model: string,
   prompt: string,
@@ -356,6 +288,9 @@ export async function generateImages(
   return await generateImagesInternal(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
 }
 
+/**
+ * 文生图内部实现
+ */
 async function generateImagesInternal(
   _model: string,
   prompt: string,
@@ -381,29 +316,19 @@ async function generateImagesInternal(
 
   const regionInfo = parseRegionFromToken(refreshToken);
   const model = getModel(_model, regionInfo.isInternational);
-  
-  let width, height, image_ratio, resolution_type;
 
-  if (_model === 'nanobanana') {
-    logger.warn('nanobanana模型当前固定使用1024x1024分辨率和4k的清晰度，您输入的参数将被忽略。');
-    width = 1024;
-    height = 1024;
-    image_ratio = 1;
-    resolution_type = '4k';
-  } else {
-    const params = getResolutionParams(resolution, ratio);
-    width = params.width;
-    height = params.height;
-    image_ratio = params.image_ratio;
-    resolution_type = params.resolution_type;
-  }
+  // 使用 payload-builder 处理分辨率
+  const resolutionResult = resolveResolution(_model, regionInfo, resolution, ratio);
+  logResolutionInfo(_model, resolutionResult, regionInfo);
 
+  // 获取积分
   const { totalCredit, giftCredit, purchaseCredit, vipCredit } = await getCredit(refreshToken);
   if (totalCredit <= 0)
     await receiveCredit(refreshToken);
 
   logger.info(`当前积分状态: 总计=${totalCredit}, 赠送=${giftCredit}, 购买=${purchaseCredit}, VIP=${vipCredit}`);
 
+  // 检查是否为多图生成模式
   const isJimeng40MultiImage = _model === "jimeng-4.0" && (
     prompt.includes("连续") ||
     prompt.includes("绘本") ||
@@ -416,120 +341,61 @@ async function generateImagesInternal(
   }
 
   const componentId = util.uuid();
+  const submitId = util.uuid();
 
-  const core_param: any = {
-    type: "",
-    id: util.uuid(),
+  // 使用 payload-builder 构建 core_param
+  const coreParam = buildCoreParam({
+    userModel: _model,
     model,
     prompt,
-    negative_prompt: negativePrompt,
+    negativePrompt,
     seed: Math.floor(Math.random() * 100000000) + 2500000000,
-    sample_strength: sampleStrength,
-    large_image_info: {
-      type: "",
-      id: util.uuid(),
-      height: height,
-      width: width,
-      resolution_type: resolution_type
-    },
-    intelligent_ratio: intelligentRatio
-  };
+    sampleStrength,
+    resolution: resolutionResult,
+    intelligentRatio,
+    mode: "text2img",
+  });
 
-  if (_model === 'nanobanana') {
-    core_param.large_image_info.min_version = '3.3.2';
-  }
+  // 使用 payload-builder 构建 metrics_extra
+  const metricsExtra = buildMetricsExtra({
+    userModel: _model,
+    regionInfo,
+    submitId,
+    scene: "ImageBasicGenerate",
+    resolutionType: resolutionResult.resolutionType,
+    abilityList: [],
+  });
 
-  // 智能比例模式下不包含 image_ratio 字段
-  if (!intelligentRatio) {
-    core_param.image_ratio = image_ratio;
-  }
+  // 使用 payload-builder 构建 draft_content
+  const draftContent = buildDraftContent({
+    componentId,
+    generateType: "generate",
+    coreParam,
+  });
+
+  // 使用 payload-builder 构建完整请求
+  const requestData = buildGenerateRequest({
+    model,
+    regionInfo,
+    submitId,
+    draftContent,
+    metricsExtra,
+  });
 
   const { aigc_data } = await request(
     "post",
     "/mweb/v1/aigc_draft/generate",
     refreshToken,
-    {
-      params: {
-      },
-      data: {
-        extend: {
-          root_model: model,
-        },
-        submit_id: util.uuid(),
-        metrics_extra: JSON.stringify({
-          promptSource: "custom",
-          generateCount: 1,
-          enterFrom: "click",
-          sceneOptions: JSON.stringify([{
-            type: "image",
-            scene: "ImageBasicGenerate",
-            modelReqKey: model,
-            resolutionType: resolution_type,
-            abilityList: [],
-            reportParams: {
-              enterSource: "generate",
-              vipSource: "generate",
-              extraVipFunctionKey: `${model}-${resolution_type}`,
-              useVipFunctionDetailsReporterHoc: true
-            }
-          }]),
-          generateId: util.uuid(),
-          isRegenerate: false
-        }),
-        draft_content: JSON.stringify({
-          type: "draft",
-          id: util.uuid(),
-          min_version: DRAFT_MIN_VERSION,
-          min_features: [],
-          is_from_tsn: true,
-          version: DRAFT_VERSION,
-          main_component_id: componentId,
-          component_list: [
-            {
-              type: "image_base_component",
-              id: componentId,
-              min_version: DRAFT_MIN_VERSION,
-              aigc_mode: "workbench",
-              metadata: {
-                type: "",
-                id: util.uuid(),
-                created_platform: 3,
-                created_platform_version: "",
-                created_time_in_ms: Date.now().toString(),
-                created_did: ""
-              },
-              generate_type: "generate",
-              abilities: {
-                type: "",
-                id: util.uuid(),
-                generate: {
-                  type: "",
-                  id: util.uuid(),
-                  core_param: core_param,
-                  gen_option: {
-                    type: "",
-                    id: util.uuid(),
-                    generate_all: false
-                  },
-                },
-              },
-            },
-          ],
-        }),
-        http_common_info: {
-          aid: getAssistantId(regionInfo)
-        }
-      },
-    }
+    { data: requestData }
   );
+
   const historyId = aigc_data.history_record_id;
   if (!historyId)
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录ID不存在");
 
-  const maxPollCount = 900;
-
+  // 轮询结果
   const poller = new SmartPoller({
-    maxPollCount,
+    maxPollCount: 900,
     expectedItemCount: 4,
     type: 'image'
   });
@@ -566,17 +432,12 @@ async function generateImagesInternal(
     }
 
     const taskInfo = response[historyId];
-    const currentStatus = taskInfo.status;
-    const currentFailCode = taskInfo.fail_code;
-    const currentItemList = taskInfo.item_list || [];
-    const finishTime = taskInfo.task?.finish_time || 0;
-
     return {
       status: {
-        status: currentStatus,
-        failCode: currentFailCode,
-        itemCount: currentItemList.length,
-        finishTime,
+        status: taskInfo.status,
+        failCode: taskInfo.fail_code,
+        itemCount: (taskInfo.item_list || []).length,
+        finishTime: taskInfo.task?.finish_time || 0,
         historyId
       } as PollingStatus,
       data: taskInfo
@@ -584,15 +445,10 @@ async function generateImagesInternal(
   }, historyId);
 
   const item_list = finalTaskInfo.item_list || [];
-  const group_key_md5 = finalTaskInfo.history_group_key_md5 || '0'
-  const item_ids: string[] = (finalTaskInfo?.pre_gen_item_ids ?? [])
-    .map((x: any) => String(x).trim())
-    .filter(Boolean);
-
   const imageUrls = extractImageUrls(item_list);
 
   if (imageUrls.length === 0 && item_list.length > 0) {
-    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图像生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图像生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
   }
 
   logger.info(`图像生成完成: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
@@ -600,6 +456,9 @@ async function generateImagesInternal(
   return imageUrls;
 }
 
+/**
+ * jimeng-4.0 多图生成
+ */
 async function generateJimeng40MultiImages(
   _model: string,
   prompt: string,
@@ -620,116 +479,62 @@ async function generateJimeng40MultiImages(
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
   const model = getModel(_model, regionInfo.isInternational);
-  const { width, height, image_ratio, resolution_type } = getResolutionParams(resolution, ratio);
+
+  // 使用 payload-builder 处理分辨率
+  const resolutionResult = resolveResolution(_model, regionInfo, resolution, ratio);
 
   const targetImageCount = prompt.match(/(\d+)张/) ? parseInt(prompt.match(/(\d+)张/)[1]) : 4;
 
-  logger.info(`使用 多图生成: ${targetImageCount}张图片 ${width}x${height} 精细度: ${sampleStrength}`);
+  logger.info(`使用 多图生成: ${targetImageCount}张图片 ${resolutionResult.width}x${resolutionResult.height} 精细度: ${sampleStrength}`);
 
   const componentId = util.uuid();
   const submitId = util.uuid();
+
+  // 使用 payload-builder 构建 core_param
+  const coreParam = buildCoreParam({
+    userModel: _model,
+    model,
+    prompt,
+    negativePrompt,
+    seed: Math.floor(Math.random() * 100000000) + 2500000000,
+    sampleStrength,
+    resolution: resolutionResult,
+    intelligentRatio,
+    mode: "text2img",
+  });
+
+  // 使用 payload-builder 构建 metrics_extra (多图模式)
+  const metricsExtra = buildMetricsExtra({
+    userModel: _model,
+    regionInfo,
+    submitId,
+    scene: "ImageMultiGenerate",
+    resolutionType: resolutionResult.resolutionType,
+    abilityList: [],
+    isMultiImage: true,
+  });
+
+  // 使用 payload-builder 构建 draft_content
+  const draftContent = buildDraftContent({
+    componentId,
+    generateType: "generate",
+    coreParam,
+  });
+
+  // 使用 payload-builder 构建完整请求
+  const requestData = buildGenerateRequest({
+    model,
+    regionInfo,
+    submitId,
+    draftContent,
+    metricsExtra,
+  });
 
   const { aigc_data } = await request(
     "post",
     "/mweb/v1/aigc_draft/generate",
     refreshToken,
-    {
-      params: {
-      },
-      data: {
-        extend: {
-          root_model: model,
-        },
-        submit_id: submitId,
-        metrics_extra: JSON.stringify({
-          templateId: "",
-          generateCount: 1,
-          promptSource: "custom",
-          templateSource: "",
-          lastRequestId: "",
-          originRequestId: "",
-          sceneOptions: JSON.stringify([{
-            type: "image",
-            scene: "ImageMultiGenerate",
-            modelReqKey: model,
-            resolutionType: resolution_type,
-            abilityList: [],
-            reportParams: {
-              enterSource: "generate",
-              vipSource: "generate",
-              extraVipFunctionKey: `${model}-${resolution_type}`,
-              useVipFunctionDetailsReporterHoc: true
-            }
-          }]),
-        }),
-        draft_content: JSON.stringify({
-          type: "draft",
-          id: util.uuid(),
-          min_version: DRAFT_MIN_VERSION,
-          min_features: [],
-          is_from_tsn: true,
-          version: DRAFT_VERSION,
-          main_component_id: componentId,
-          component_list: [
-            {
-              type: "image_base_component",
-              id: componentId,
-              min_version: DRAFT_MIN_VERSION,
-              aigc_mode: "workbench",
-              metadata: {
-                type: "",
-                id: util.uuid(),
-                created_platform: 3,
-                created_platform_version: "",
-                created_time_in_ms: Date.now().toString(),
-                created_did: ""
-              },
-              generate_type: "generate",
-              abilities: {
-                type: "",
-                id: util.uuid(),
-                generate: {
-                  type: "",
-                  id: util.uuid(),
-                  core_param: (() => {
-                    const param: any = {
-                      type: "",
-                      id: util.uuid(),
-                      model,
-                      prompt,
-                      negative_prompt: negativePrompt,
-                      seed: Math.floor(Math.random() * 100000000) + 2500000000,
-                      sample_strength: sampleStrength,
-                      large_image_info: {
-                        type: "",
-                        id: util.uuid(),
-                        height: height,
-                        width: width,
-                        resolution_type: resolution_type
-                      },
-                      intelligent_ratio: intelligentRatio
-                    };
-                    // 智能比例模式下不包含 image_ratio 字段
-                    if (!intelligentRatio) {
-                      param.image_ratio = image_ratio;
-                    }
-                    return param;
-                  })(),
-                  gen_option: {
-                    type: "",
-                    id: util.uuid(),
-                    generate_all: false
-                  },
-                },
-              },
-            },
-          ],
-        }),
-        http_common_info: {
-          aid: getAssistantId(regionInfo)
-        }
-      },
-    }
+    { data: requestData }
   );
 
   const historyId = aigc_data?.history_record_id;
@@ -738,10 +543,9 @@ async function generateJimeng40MultiImages(
 
   logger.info(`多图生成任务已提交，submit_id: ${submitId}, history_id: ${historyId}，等待生成 ${targetImageCount} 张图片...`);
 
-  const maxPollCount = 600;
-
+  // 轮询结果
   const poller = new SmartPoller({
-    maxPollCount,
+    maxPollCount: 600,
     expectedItemCount: targetImageCount,
     type: 'image'
   });
@@ -773,17 +577,12 @@ async function generateJimeng40MultiImages(
       throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
 
     const taskInfo = result[historyId];
-    const currentStatus = taskInfo.status;
-    const currentFailCode = taskInfo.fail_code;
-    const currentItemList = taskInfo.item_list || [];
-    const finishTime = taskInfo.task?.finish_time || 0;
-
     return {
       status: {
-        status: currentStatus,
-        failCode: currentFailCode,
-        itemCount: currentItemList.length,
-        finishTime,
+        status: taskInfo.status,
+        failCode: taskInfo.fail_code,
+        itemCount: (taskInfo.item_list || []).length,
+        finishTime: taskInfo.task?.finish_time || 0,
         historyId
       } as PollingStatus,
       data: taskInfo
@@ -794,7 +593,7 @@ async function generateJimeng40MultiImages(
   const imageUrls = extractImageUrls(item_list);
 
   if (imageUrls.length === 0 && item_list.length > 0) {
-    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `多图生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL，所有item都缺少 image.large_images[0].image_url 字段`);
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `多图生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
   }
 
   logger.info(`多图生成结果: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);

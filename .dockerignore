@@ -3,6 +3,7 @@ node_modules
 dist
 *.log
 logs
+jimeng-*.md
 
 # 开发工具
 .vscode

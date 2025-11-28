@@ -27,14 +27,14 @@ export const REGION_SG = "SG";
 export const PLATFORM_CODE = "7";
 
 // 版本代码
-export const VERSION_CODE = "1.0.0";
+export const VERSION_CODE = "5.8.0";
 
 // 默认模型
 export const DEFAULT_IMAGE_MODEL = "jimeng-4.0";
 export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.0";
 
 // 草稿版本
-export const DRAFT_VERSION = "3.3.3";
+export const DRAFT_VERSION = "3.3.4";
 export const DRAFT_MIN_VERSION = "3.0.2";
 
 // 图像模型映射
@@ -92,15 +92,16 @@ export const POLLING_CONFIG = {
 // 支持的图片比例和分辨率
 export const RESOLUTION_OPTIONS = {
   "1k":{
-    "1:1": { width: 1328, height: 1328, ratio: 1 },
-    "4:3": { width: 1472, height: 1104, ratio: 4 },
-    "3:4": { width: 1104, height: 1472, ratio: 2 },
-    "16:9": { width: 1664, height: 936, ratio: 3 },
-    "9:16": { width: 936, height: 1664, ratio: 5 },
-    "3:2": { width: 1584, height: 1056, ratio: 7 },
-    "2:3": { width: 1056, height: 1584, ratio: 6 },
-    "21:9": { width: 2016, height: 864, ratio: 8 },
+    "1:1": { width: 1024, height: 1024, ratio: 1 },
+    "4:3": { width: 768, height: 1024, ratio: 4 },
+    "3:4": { width: 1024, height: 768, ratio: 2 },
+    "16:9": { width: 1024, height: 576, ratio: 3 },
+    "9:16": { width: 576, height: 1024, ratio: 5 },
+    "3:2": { width: 1024, height: 682, ratio: 7 },
+    "2:3": { width: 682, height: 1024, ratio: 6 },
+    "21:9": { width: 1195, height: 512, ratio: 8 },
   },
+
   "2k": {
     "1:1": {width: 2048, height: 2048, ratio: 1},
     "4:3": {width: 2304, height: 1728, ratio: 4},
