@@ -1,5 +1,6 @@
 import _ from "lodash";
 import fs from "fs-extra";
+import { Buffer } from "buffer";
 
 import APIException from "@/lib/exceptions/APIException.ts";
 import EX from "@/api/consts/exceptions.ts";
@@ -104,8 +105,26 @@ export async function generateVideo(
       const file = uploadedFiles[i];
       if (!file) continue;
       try {
-        logger.info(`开始上传第 ${i + 1} 张本地图片: ${file.originalFilename}`);
-        const imageUri = await uploadImageFromFile(file, refreshToken, regionInfo);
+        let imageBuffer: Buffer | null = null;
+        let fileName = '';
+        if (Buffer.isBuffer(file)) {
+          imageBuffer = file;
+          fileName = `buffer_${i + 1}`;
+        } else if (file?.buffer && Buffer.isBuffer(file.buffer)) {
+          imageBuffer = file.buffer;
+          fileName = file.originalFilename || `buffer_${i + 1}`;
+        } else if (file?.filepath) {
+          imageBuffer = await fs.readFile(file.filepath);
+          fileName = file.originalFilename || file.filepath;
+        }
+
+        if (!imageBuffer) {
+          logger.warn(`第 ${i + 1} 张本地图片未找到可用的缓冲数据，跳过`);
+          continue;
+        }
+
+        logger.info(`开始上传第 ${i + 1} 张本地图片: ${fileName}`);
+        const imageUri = await uploadImageBuffer(imageBuffer, refreshToken, regionInfo);
         if (imageUri) {
           uploadIDs.push(imageUri);
           logger.info(`第 ${i + 1} 张本地图片上传成功: ${imageUri}`);
