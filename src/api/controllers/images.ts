@@ -313,16 +313,16 @@ async function generateImagesInternal(
 
   logger.info(`当前积分状态: 总计=${totalCredit}, 赠送=${giftCredit}, 购买=${purchaseCredit}, VIP=${vipCredit}`);
 
-  // 检查是否为多图生成模式
-  const isJimeng40MultiImage = _model === "jimeng-4.0" && (
+  // 检查是否为多图生成模式 (jimeng-4.0/jimeng-4.1 支持)
+  const isJimeng4xMultiImage = ['jimeng-4.0', 'jimeng-4.1'].includes(_model) && (
     prompt.includes("连续") ||
     prompt.includes("绘本") ||
     prompt.includes("故事") ||
     /\d+张/.test(prompt)
   );
 
-  if (isJimeng40MultiImage) {
-    return await generateJimeng40MultiImages(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
+  if (isJimeng4xMultiImage) {
+    return await generateJimeng4xMultiImages(_model, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
   }
 
   const componentId = util.uuid();
@@ -442,9 +442,9 @@ async function generateImagesInternal(
 }
 
 /**
- * jimeng-4.0 多图生成
+ * jimeng-4.0/jimeng-4.1 多图生成
  */
-async function generateJimeng40MultiImages(
+async function generateJimeng4xMultiImages(
   _model: string,
   prompt: string,
   {

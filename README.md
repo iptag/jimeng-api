@@ -220,7 +220,7 @@ For detailed usage, please refer to `jimeng-api/Skill.md`.
 - `prompt` (string): The text description of the image.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. **Note**: When `intelligent_ratio` is `true`, this parameter will be ignored and the system will automatically infer the optimal ratio from the prompt.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
-- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0 model; other models will ignore it.** When enabled, the system automatically infers the optimal image ratio from the prompt (e.g., "portrait" → 9:16, "landscape" → 16:9).
+- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0/jimeng-4.1 model; other models will ignore it.** When enabled, the system automatically infers the optimal image ratio from the prompt (e.g., "portrait" → 9:16, "landscape" → 16:9).
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").
@@ -251,6 +251,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 **Supported Models**:
 - `nanobananapro`: Only supported on the international site, supporting `ratio` and `resolution`.
 - `nanobanana`: Only supported on the international site.
+- `jimeng-4.1`: Only supported on the domestic site, supports all 2k/4k ratios and intelligent_ratio.
 - `jimeng-4.0`: Supported on both domestic and international sites.
 - `jimeng-3.1`: Only supported on the domestic site.
 - `jimeng-3.0`: Supported on both domestic and international sites.
@@ -309,7 +310,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 - `images` (array): An array of input images.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
-- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0 model; other models will ignore it.** When enabled, the system automatically adjusts the output ratio based on the prompt and input images.
+- `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0/jimeng-4.1 model; other models will ignore it.** When enabled, the system automatically adjusts the output ratio based on the prompt and input images.
 - `negative_prompt` (string, optional): Negative prompt words.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").

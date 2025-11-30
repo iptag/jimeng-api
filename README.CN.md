@@ -222,7 +222,7 @@ Claude: [自动调用 skill,生成图片并保存到 /pic 目录]
 - `prompt` (string): 图像描述文本
 - `ratio` (string, 可选): 图像比例，默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`。**注意**: 当 `intelligent_ratio` 为 `true` 时，此参数将被忽略，系统会根据提示词自动推断最佳比例。
 - `resolution` (string, 可选): 分辨率级别，默认为 `"2k"`。支持的分辨率: `1k`, `2k`, `4k`。
-- `intelligent_ratio` (boolean, 可选): 是否启用智能比例，默认为 `false`。**⚠️ 此参数仅对 jimeng-4.0 模型有效，其他模型将忽略此参数。** 启用后系统会根据提示词自动推断最佳图像比例（例如："竖屏" → 9:16，"横屏" → 16:9）。
+- `intelligent_ratio` (boolean, 可选): 是否启用智能比例，默认为 `false`。**⚠️ 此参数仅对 jimeng-4.0/jimeng-4.1 模型有效，其他模型将忽略此参数。** 启用后系统会根据提示词自动推断最佳图像比例（例如："竖屏" → 9:16，"横屏" → 16:9）。
 - `negative_prompt` (string, 可选): 负面提示词
 - `sample_strength` (number, 可选): 采样强度 (0.0-1.0)
 - `response_format` (string, 可选): 响应格式 ("url" 或 "b64_json")
@@ -263,6 +263,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 **支持的模型**:
 - `nanobananapro`: 仅国际站支持，支持`ratio` 和`resolution`参数
 - `nanobanana`: 仅国际站支持
+- `jimeng-4.1`: 仅国内站支持，支持 2k/4k 全部 ratio 及 intelligent_ratio
 - `jimeng-4.0`: 国内、国际站均支持
 - `jimeng-3.1`: 仅国内站支持
 - `jimeng-3.0`: 国内、国际站均支持
@@ -322,7 +323,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 - `images` (array): 输入图片数组
 - `ratio` (string, 可选): 图像比例，默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`。
 - `resolution` (string, 可选): 分辨率级别，默认为 `"2k"`。支持的分辨率: `1k`, `2k`, `4k`。
-- `intelligent_ratio` (boolean, 可选): 是否启用智能比例，默认为 `false`。**⚠️ 此参数仅对 jimeng-4.0 模型有效，其他模型将忽略此参数。** 启用后系统会根据提示词和输入图片自动调整输出比例。
+- `intelligent_ratio` (boolean, 可选): 是否启用智能比例，默认为 `false`。**⚠️ 此参数仅对 jimeng-4.0/jimeng-4.1 模型有效，其他模型将忽略此参数。** 启用后系统会根据提示词和输入图片自动调整输出比例。
 - `negative_prompt` (string, 可选): 负面提示词
 - `sample_strength` (number, 可选): 采样强度 (0.0-1.0)
 - `response_format` (string, 可选): 响应格式 ("url"(默认) 或 "b64_json")

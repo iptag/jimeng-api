@@ -144,7 +144,7 @@ export interface BuildCoreParamOptions {
  * 构建 core_param
  * - 图生图: image_ratio 始终保留，prompt 前缀为 ## * imageCount
  * - 文生图: intelligent_ratio=true 时移除 image_ratio
- * - intelligent_ratio 仅对 jimeng-4.0 模型有效，其他模型忽略此参数
+ * - intelligent_ratio 仅对 jimeng-4.0/jimeng-4.1 模型有效，其他模型忽略此参数
  */
 export function buildCoreParam(options: BuildCoreParamOptions) {
   const {
@@ -160,8 +160,8 @@ export function buildCoreParam(options: BuildCoreParamOptions) {
     mode = "text2img",
   } = options;
 
-  // ⚠️ intelligent_ratio 仅对 jimeng-4.0 模型有效
-  const effectiveIntelligentRatio = (userModel === 'jimeng-4.0') ? intelligentRatio : false;
+  // ⚠️ intelligent_ratio 仅对 jimeng-4.0/jimeng-4.1 模型有效
+  const effectiveIntelligentRatio = ['jimeng-4.0', 'jimeng-4.1'].includes(userModel) ? intelligentRatio : false;
 
   // 图生图时，prompt 前缀规则: 每张图片对应 2 个 #
   // 1张图 → ##, 2张图 → ####, 3张图 → ######
