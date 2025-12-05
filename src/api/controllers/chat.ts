@@ -5,10 +5,11 @@ import APIException from "@/lib/exceptions/APIException.ts";
 import EX from "@/api/consts/exceptions.ts";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
-import { generateImages, DEFAULT_MODEL } from "./images.ts";
+import { generateImages, generateImageComposition, DEFAULT_MODEL } from "./images.ts";
 import { generateVideo, DEFAULT_MODEL as DEFAULT_VIDEO_MODEL } from "./videos.ts";
 import { JimengErrorHandler, withRetry } from "@/lib/error-handler.ts";
 import { RETRY_CONFIG } from "@/api/consts/common.ts";
+import { parseMessages, detectRequestType, base64ToBuffer } from "@/lib/message-parser.ts";
 
 /**
  * 解析模型
@@ -41,35 +42,66 @@ function isVideoModel(model: string) {
  *
  * @param messages 参考gpt系列消息格式，多轮对话请完整提供上下文
  * @param refreshToken 用于刷新access_token的refresh_token
- * @param assistantId 智能体ID，默认使用jimeng原版
+ * @param _model 模型名称，默认使用jimeng原版
+ * @param options 生成选项（ratio, resolution, duration, sample_strength, negative_prompt）
  * @param retryCount 重试次数
  */
 export async function createCompletion(
   messages: any[],
   refreshToken: string,
   _model = DEFAULT_MODEL,
+  options: any = {},
   retryCount = 0
 ) {
   return (async () => {
     if (messages.length === 0)
       throw new APIException(EX.API_REQUEST_PARAMS_INVALID, "消息不能为空");
 
-    const { model, width, height } = parseModel(_model);
     logger.info(messages);
 
-    // 检查是否为视频生成请求
-    if (isVideoModel(_model)) {
+    const userMessages = messages.filter((message) => message?.role === "user");
+    const targetMessages = userMessages.length > 0 ? [userMessages[userMessages.length - 1]] : [messages[messages.length - 1]];
+    const { text: parsedPrompt, images, hasImages } = parseMessages(targetMessages);
+    const fallbackPrompt = parseMessages([messages[messages.length - 1]]).text;
+    const finalPrompt = String(parsedPrompt || fallbackPrompt || "").trim();
+    const requestType = detectRequestType(_model, hasImages);
+
+    logger.info(`智能路由请求类型: ${requestType}, 提示词长度: ${finalPrompt.length}, 图片数量: ${images.length}`);
+    if (hasImages) {
+      logger.info(`检测到图片输入，图片类型: ${images.map(img => img.type).join(', ')}`);
+    }
+    
+    if (hasImages && images.length === 0) {
+      logger.error('路由检测到hasImages=true但images数组为空，这是一个bug');
+      throw new APIException(EX.API_REQUEST_PARAMS_INVALID, "消息解析错误：检测到图片标记但无法提取图片");
+    }
+
+    if (requestType === 'text-to-video' || requestType === 'image-to-video') {
       try {
-        // 视频生成
-        logger.info(`开始生成视频，模型: ${_model}`);
+        const imageUrls = images.filter(img => img.type === 'url').map(img => img.url!);
+        const base64Images = images.filter(img => img.type === 'base64');
+        
+        const videoOptions: any = {
+          ratio: options.ratio || "1:1",
+          resolution: options.resolution || "720p",
+          duration: options.duration || 5,
+          filePaths: imageUrls
+        };
+
+        if (base64Images.length > 0) {
+          logger.info(`检测到${base64Images.length}张Base64图片，转换为Buffer对象`);
+          const bufferFiles: { [key: string]: Buffer } = {};
+          base64Images.forEach((img, index) => {
+            bufferFiles[`image_${index}`] = base64ToBuffer(img.base64!);
+          });
+          videoOptions.files = bufferFiles;
+        }
+
+        logger.info(`开始生成视频，模型: ${_model}, 类型: ${requestType}`);
         const videoUrl = await generateVideo(
           _model,
-          messages[messages.length - 1].content,
-          {
-            width,
-            height,
-            resolution: "720p", // 默认分辨率
-          },
+          finalPrompt,
+          videoOptions,
           refreshToken
         );
 
@@ -91,14 +123,12 @@ export async function createCompletion(
           usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
           created: util.unixTimestamp(),
         };
-      } catch (error) {
+      } catch (error: any) {
         logger.error(`视频生成失败: ${error.message}`);
-        // 如果是积分不足等特定错误，直接抛出
         if (error instanceof APIException) {
           throw error;
         }
 
-        // 其他错误返回友好提示
         return {
           id: util.uuid(),
           model: _model,
@@ -117,18 +147,30 @@ export async function createCompletion(
           created: util.unixTimestamp(),
         };
       }
-    } else {
-      // 图像生成
-      const imageUrls = await generateImages(
+    }
+
+    if (requestType === 'image-to-image') {
+      logger.info(`开始图生图，模型: ${_model}, 图片数量: ${images.length}`);
+      const { model, width, height } = parseModel(_model);
+      
+      const imageInputs = images.map(img => 
+        img.type === 'base64' ? base64ToBuffer(img.base64!) : img.url!
+      );
+      
+      const resultUrls = await generateImageComposition(
         model,
-        messages[messages.length - 1].content,
+        finalPrompt,
+        imageInputs,
         {
-          width,
-          height,
+          ratio: options.ratio || "1:1",
+          resolution: options.resolution || "2k",
+          sampleStrength: options.sample_strength || 0.5,
+          negativePrompt: options.negative_prompt || "",
         },
         refreshToken
       );
 
+      logger.info(`图生图完成，生成${resultUrls.length}张图片`);
       return {
         id: util.uuid(),
         model: _model || model,
@@ -138,7 +180,7 @@ export async function createCompletion(
             index: 0,
             message: {
               role: "assistant",
-              content: imageUrls.reduce(
+              content: resultUrls.reduce(
                 (acc, url, i) => acc + `![image_${i}](${url})\n`,
                 ""
               ),
@@ -150,13 +192,49 @@ export async function createCompletion(
         created: util.unixTimestamp(),
       };
     }
+
+    logger.info(`开始文生图，模型: ${_model}`);
+    const { model, width, height } = parseModel(_model);
+    const imageUrls = await generateImages(
+      model,
+      finalPrompt,
+      {
+        ratio: options.ratio || "1:1",
+        resolution: options.resolution || "2k",
+        sampleStrength: options.sample_strength || 0.5,
+        negativePrompt: options.negative_prompt || "",
+      },
+      refreshToken
+    );
+
+    logger.info(`文生图完成，生成${imageUrls.length}张图片`);
+    return {
+      id: util.uuid(),
+      model: _model || model,
+      object: "chat.completion",
+      choices: [
+        {
+          index: 0,
+          message: {
+            role: "assistant",
+            content: imageUrls.reduce(
+              (acc, url, i) => acc + `![image_${i}](${url})\n`,
+              ""
+            ),
+          },
+          finish_reason: "stop",
+        },
+      ],
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+      created: util.unixTimestamp(),
+    };
   })().catch((err) => {
     if (retryCount < RETRY_CONFIG.MAX_RETRY_COUNT) {
       logger.error(`Response error: ${err.stack}`);
       logger.warn(`Try again after ${RETRY_CONFIG.RETRY_DELAY / 1000}s...`);
       return (async () => {
         await new Promise((resolve) => setTimeout(resolve, RETRY_CONFIG.RETRY_DELAY));
-        return createCompletion(messages, refreshToken, _model, retryCount + 1);
+        return createCompletion(messages, refreshToken, _model, options, retryCount + 1);
       })();
     }
     throw err;
@@ -168,17 +246,18 @@ export async function createCompletion(
  *
  * @param messages 参考gpt系列消息格式，多轮对话请完整提供上下文
  * @param refreshToken 用于刷新access_token的refresh_token
- * @param assistantId 智能体ID，默认使用jimeng原版
+ * @param _model 模型名称，默认使用jimeng原版
+ * @param options 生成选项（ratio, resolution, duration, sample_strength, negative_prompt）
  * @param retryCount 重试次数
  */
 export async function createCompletionStream(
   messages: any[],
   refreshToken: string,
   _model = DEFAULT_MODEL,
+  options: any = {},
   retryCount = 0
 ) {
   return (async () => {
-    const { model, width, height } = parseModel(_model);
     logger.info(messages);
 
     const stream = new PassThrough();
@@ -189,8 +268,59 @@ export async function createCompletionStream(
       return stream;
     }
 
-    // 检查是否为视频生成请求
-    if (isVideoModel(_model)) {
+    const userMessages = messages.filter((message) => message?.role === "user");
+    const targetMessages = userMessages.length > 0 ? [userMessages[userMessages.length - 1]] : [messages[messages.length - 1]];
+    const { text: parsedPrompt, images, hasImages } = parseMessages(targetMessages);
+    const fallbackPrompt = parseMessages([messages[messages.length - 1]]).text;
+    const finalPrompt = String(parsedPrompt || fallbackPrompt || "").trim();
+    const requestType = detectRequestType(_model, hasImages);
+
+    logger.info(`[Stream] 智能路由请求类型: ${requestType}, 提示词长度: ${finalPrompt.length}, 图片数量: ${images.length}`);
+    if (hasImages) {
+      logger.info(`[Stream] 检测到图片输入，图片类型: ${images.map(img => img.type).join(', ')}`);
+    }
+    
+    if (hasImages && images.length === 0) {
+      logger.error('[Stream] 路由检测到hasImages=true但images数组为空，这是一个bug');
+      stream.write(
+        "data: " +
+          JSON.stringify({
+            id: util.uuid(),
+            model: _model,
+            object: "chat.completion.chunk",
+            choices: [
+              {
+                index: 0,
+                delta: { role: "assistant", content: "消息解析错误：检测到图片标记但无法提取图片" },
+                finish_reason: "stop",
+              },
+            ],
+          }) +
+          "\n\n"
+      );
+      stream.end("data: [DONE]\n\n");
+      return stream;
+    }
+
+    if (requestType === 'text-to-video' || requestType === 'image-to-video') {
+      const imageUrls = images.filter(img => img.type === 'url').map(img => img.url!);
+      const base64Images = images.filter(img => img.type === 'base64');
+      const videoOptions: any = {
+        ratio: options.ratio || "1:1",
+        resolution: options.resolution || "720p",
+        duration: options.duration || 5,
+        filePaths: imageUrls,
+      };
+
+      if (base64Images.length > 0) {
+        logger.info(`[Stream] 检测到${base64Images.length}张Base64图片，转换为Buffer对象`);
+        const bufferFiles: { [key: string]: Buffer } = {};
+        base64Images.forEach((img, index) => {
+          bufferFiles[`image_${index}`] = base64ToBuffer(img.base64!);
+        });
+        videoOptions.files = bufferFiles;
+      }
+
       // 视频生成
       stream.write(
         "data: " +
@@ -209,8 +339,7 @@ export async function createCompletionStream(
           "\n\n"
       );
 
-      // 视频生成
-      logger.info(`开始生成视频，提示词: ${messages[messages.length - 1].content}`);
+      logger.info(`开始生成视频，提示词: ${finalPrompt}`);
 
       // 进度更新定时器
       const progressInterval = setInterval(() => {
@@ -272,7 +401,7 @@ export async function createCompletionStream(
         logger.debug('视频生成流已关闭，定时器已清理');
       });
 
-      logger.info(`开始生成视频，模型: ${_model}, 提示词: ${messages[messages.length - 1].content.substring(0, 50)}...`);
+      logger.info(`开始生成视频，模型: ${_model}, 提示词长度: ${finalPrompt.length}`);
 
       // 先给用户一个初始提示
       stream.write(
@@ -297,8 +426,8 @@ export async function createCompletionStream(
 
       generateVideo(
         _model,
-        messages[messages.length - 1].content,
-        { width, height, resolution: "720p" },
+        finalPrompt,
+        videoOptions,
         refreshToken
       )
         .then((videoUrl) => {
@@ -403,8 +532,86 @@ export async function createCompletionStream(
             logger.debug('视频生成失败，但流已关闭，跳过错误信息写入');
           }
         });
+    } else if (requestType === 'image-to-image') {
+      logger.info(`[Stream] 开始图生图，模型: ${_model}, 图片数量: ${images.length}`);
+      const { model, width, height } = parseModel(_model);
+
+      const imageInputs = images.map(img => 
+        img.type === 'base64' ? base64ToBuffer(img.base64!) : img.url!
+      );
+
+      generateImageComposition(
+        model,
+        finalPrompt,
+        imageInputs,
+        {
+          ratio: options.ratio || "1:1",
+          resolution: options.resolution || "2k",
+          sampleStrength: options.sample_strength || 0.5,
+          negativePrompt: options.negative_prompt || "",
+        },
+        refreshToken
+      )
+        .then((imageUrls) => {
+          if (!stream.destroyed && stream.writable) {
+            for (let i = 0; i < imageUrls.length; i++) {
+              const url = imageUrls[i];
+              const isLast = i === imageUrls.length - 1;
+              stream.write(
+                "data: " +
+                  JSON.stringify({
+                    id: util.uuid(),
+                    model: _model || model,
+                    object: "chat.completion.chunk",
+                    choices: [
+                      {
+                        index: 0,
+                        delta: {
+                          role: "assistant",
+                          content: `![image_${i}](${url})\n`,
+                        },
+                        finish_reason: isLast ? "stop" : null,
+                      },
+                    ],
+                  }) +
+                  "\n\n"
+              );
+            }
+            stream.end("data: [DONE]\n\n");
+          } else {
+            logger.debug('[Stream] 图生图完成，但流已关闭，跳过写入');
+          }
+        })
+        .catch((err) => {
+          if (!stream.destroyed && stream.writable) {
+            stream.write(
+              "data: " +
+                JSON.stringify({
+                  id: util.uuid(),
+                  model: _model || model,
+                  object: "chat.completion.chunk",
+                  choices: [
+                    {
+                      index: 1,
+                      delta: {
+                        role: "assistant",
+                        content: `图生图失败: ${err.message}`,
+                      },
+                      finish_reason: "stop",
+                    },
+                  ],
+                }) +
+                "\n\n"
+            );
+            stream.end("data: [DONE]\n\n");
+          } else {
+            logger.debug('[Stream] 图生图失败，但流已关闭，跳过错误信息写入');
+          }
+        });
     } else {
-      // 图像生成
+      // 图像生成 (text-to-image)
+      logger.info(`[Stream] 开始文生图，模型: ${_model}`);
+      const { model, width, height } = parseModel(_model);
       stream.write(
         "data: " +
           JSON.stringify({
@@ -424,8 +631,13 @@ export async function createCompletionStream(
 
       generateImages(
         model,
-        messages[messages.length - 1].content,
-        { width, height },
+        finalPrompt,
+        {
+          ratio: options.ratio || "1:1",
+          resolution: options.resolution || "2k",
+          sampleStrength: options.sample_strength || 0.5,
+          negativePrompt: options.negative_prompt || "",
+        },
         refreshToken
       )
         .then((imageUrls) => {
@@ -516,6 +728,7 @@ export async function createCompletionStream(
           messages,
           refreshToken,
           _model,
+          options,
           retryCount + 1
         );
       })();
