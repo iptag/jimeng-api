@@ -8,7 +8,6 @@ import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
 import { DEFAULT_IMAGE_MODEL, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US } from "@/api/consts/common.ts";
 import { uploadImageFromUrl, uploadImageBuffer } from "@/lib/image-uploader.ts";
-import { extractImageUrls } from "@/lib/image-utils.ts";
 import {
   resolveResolution,
   getBenefitCount,
@@ -49,6 +48,107 @@ function logResolutionInfo(_model: string, resolution: ResolutionResult, regionI
       logger.warn(`${regionName}站 nanobanana 模型固定使用1k清晰度。`);
     }
   }
+}
+
+/**
+ * 通过 get_history_by_ids 轮询等待任务完成，然后用 get_local_item_list 获取无水印图片
+ * 结合两个接口的优势：get_history_by_ids 提供准确的任务状态，get_local_item_list 提供无水印图片
+ * @param preGenItemIds 生成任务的 item_id 数组
+ * @param refreshToken 刷新令牌
+ * @param historyId 历史记录ID
+ * @returns 无水印图片 URL 数组
+ */
+async function pollForImagesViaQuery(
+  preGenItemIds: string[],
+  refreshToken: string,
+  historyId: string
+): Promise<string[]> {
+  const expectedItemCount = preGenItemIds.length;
+
+  logger.info(`开始轮询任务状态，history_id: ${historyId}，期望获取 ${expectedItemCount} 张图片`);
+
+  // 第一阶段：使用 get_history_by_ids 轮询等待任务完成
+  const poller = new SmartPoller({
+    maxPollCount: 900,
+    expectedItemCount,
+    type: 'image'
+  });
+
+  const { result: pollingResult } = await poller.poll(async () => {
+    const response = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
+      data: {
+        history_ids: [historyId],
+        image_info: {
+          width: 2048,
+          height: 2048,
+          format: "webp",
+          image_scene_list: [
+            { scene: "smart_crop", width: 360, height: 360, uniq_key: "smart_crop-w:360-h:360", format: "webp" },
+            { scene: "normal", width: 720, height: 720, uniq_key: "720", format: "webp" },
+          ],
+        }
+      },
+    });
+
+    if (!response[historyId]) {
+      logger.error(`历史记录不存在: historyId=${historyId}`);
+      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
+    }
+
+    const taskInfo = response[historyId];
+    return {
+      status: {
+        status: taskInfo.status,
+        failCode: taskInfo.fail_code,
+        itemCount: (taskInfo.item_list || []).length,
+        finishTime: taskInfo.task?.finish_time || 0,
+        historyId
+      } as PollingStatus,
+      data: taskInfo
+    };
+  }, historyId);
+
+  logger.info(`任务已完成，状态: ${pollingResult.status}，耗时 ${pollingResult.elapsedTime} 秒，开始获取无水印图片...`);
+
+  // 第二阶段：使用 get_local_item_list 获取无水印图片
+  const localItemResponse = await request(
+    "post",
+    `/mweb/v1/get_local_item_list`,
+    refreshToken,
+    {
+      data: {
+        item_id_list: preGenItemIds
+      }
+    }
+  );
+
+  const itemList = localItemResponse?.item_list || [];
+
+  // 提取图片URL
+  const imageUrls: string[] = [];
+  for (const item of itemList) {
+    let imageUrl: string | null = null;
+
+    // 优先使用 large_images
+    if (item?.image?.large_images?.[0]?.image_url) {
+      imageUrl = item.image.large_images[0].image_url;
+    }
+
+    // 备用: 使用 cover_url
+    if (!imageUrl && item?.common_attr?.cover_url) {
+      imageUrl = item.common_attr.cover_url;
+    }
+
+    if (imageUrl) {
+      // 将URL中的 \u0026 转换为 &
+      imageUrl = imageUrl.replace(/\\u0026/g, '&');
+      imageUrls.push(imageUrl);
+      logger.debug(`获取到图片URL: ${imageUrl.substring(0, 100)}...`);
+    }
+  }
+
+  logger.info(`图片生成完成，共获取 ${imageUrls.length} 张无水印图片，总耗时 ${pollingResult.elapsedTime} 秒`);
+  return imageUrls;
 }
 
 /**
@@ -185,67 +285,24 @@ export async function generateImageComposition(
   );
 
   const historyId = aigc_data?.history_record_id;
+  const preGenItemIds = aigc_data?.pre_gen_item_ids;
+
   if (!historyId)
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录ID不存在");
 
-  logger.info(`图生图任务已提交，history_id: ${historyId}，等待生成完成...`);
+  if (!preGenItemIds || preGenItemIds.length === 0)
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "pre_gen_item_ids 不存在");
 
-  // 轮询结果
-  const poller = new SmartPoller({
-    maxPollCount: 900,
-    expectedItemCount: 1,
-    type: 'image'
-  });
+  logger.info(`图生图任务已提交，history_id: ${historyId}，pre_gen_item_ids: ${preGenItemIds.join(', ')}，等待生成完成...`);
 
-  const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {
-    const response = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
-      data: {
-        history_ids: [historyId],
-        image_info: {
-          width: 2048,
-          height: 2048,
-          format: "webp",
-          image_scene_list: [
-            { scene: "smart_crop", width: 360, height: 360, uniq_key: "smart_crop-w:360-h:360", format: "webp" },
-            { scene: "smart_crop", width: 480, height: 480, uniq_key: "smart_crop-w:480-h:480", format: "webp" },
-            { scene: "smart_crop", width: 720, height: 720, uniq_key: "smart_crop-w:720-h:720", format: "webp" },
-            { scene: "smart_crop", width: 720, height: 480, uniq_key: "smart_crop-w:720-h:480", format: "webp" },
-            { scene: "normal", width: 2400, height: 2400, uniq_key: "2400", format: "webp" },
-            { scene: "normal", width: 1080, height: 1080, uniq_key: "1080", format: "webp" },
-            { scene: "normal", width: 720, height: 720, uniq_key: "720", format: "webp" },
-            { scene: "normal", width: 480, height: 480, uniq_key: "480", format: "webp" },
-            { scene: "normal", width: 360, height: 360, uniq_key: "360", format: "webp" }
-          ]
-        }
-      }
-    });
+  // 使用 get_local_item_list 接口轮询获取无水印图片
+  const resultImageUrls = await pollForImagesViaQuery(preGenItemIds, refreshToken, historyId);
 
-    if (!response[historyId]) {
-      logger.error(`历史记录不存在: historyId=${historyId}`);
-      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
-    }
-
-    const taskInfo = response[historyId];
-    return {
-      status: {
-        status: taskInfo.status,
-        failCode: taskInfo.fail_code,
-        itemCount: (taskInfo.item_list || []).length,
-        finishTime: taskInfo.task?.finish_time || 0,
-        historyId
-      } as PollingStatus,
-      data: taskInfo
-    };
-  }, historyId);
-
-  const item_list = finalTaskInfo.item_list || [];
-  const resultImageUrls = extractImageUrls(item_list);
-
-  if (resultImageUrls.length === 0 && item_list.length > 0) {
-    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图生图失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
+  if (resultImageUrls.length === 0) {
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图生图失败: 未能获取到任何图片URL`);
   }
 
-  logger.info(`图生图结果: 成功生成 ${resultImageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
+  logger.info(`图生图结果: 成功生成 ${resultImageUrls.length} 张无水印图片`);
 
   return resultImageUrls;
 }
@@ -375,68 +432,24 @@ async function generateImagesInternal(
   );
 
   const historyId = aigc_data.history_record_id;
+  const preGenItemIds = aigc_data.pre_gen_item_ids;
+
   if (!historyId)
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录ID不存在");
 
-  // 轮询结果
-  const poller = new SmartPoller({
-    maxPollCount: 900,
-    expectedItemCount: 4,
-    type: 'image'
-  });
+  if (!preGenItemIds || preGenItemIds.length === 0)
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "pre_gen_item_ids 不存在");
 
-  const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {
-    const response = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
-      data: {
-        history_ids: [historyId],
-        image_info: {
-          width: 2048,
-          height: 2048,
-          format: "webp",
-          image_scene_list: [
-            { scene: "smart_crop", width: 360, height: 360, uniq_key: "smart_crop-w:360-h:360", format: "webp" },
-            { scene: "smart_crop", width: 480, height: 480, uniq_key: "smart_crop-w:480-h:480", format: "webp" },
-            { scene: "smart_crop", width: 720, height: 720, uniq_key: "smart_crop-w:720-h:720", format: "webp" },
-            { scene: "smart_crop", width: 720, height: 480, uniq_key: "smart_crop-w:720-h:480", format: "webp" },
-            { scene: "smart_crop", width: 360, height: 240, uniq_key: "smart_crop-w:360-h:240", format: "webp" },
-            { scene: "smart_crop", width: 240, height: 320, uniq_key: "smart_crop-w:240-h:320", format: "webp" },
-            { scene: "smart_crop", width: 480, height: 640, uniq_key: "smart_crop-w:480-h:640", format: "webp" },
-            { scene: "normal", width: 2400, height: 2400, uniq_key: "2400", format: "webp" },
-            { scene: "normal", width: 1080, height: 1080, uniq_key: "1080", format: "webp" },
-            { scene: "normal", width: 720, height: 720, uniq_key: "720", format: "webp" },
-            { scene: "normal", width: 480, height: 480, uniq_key: "480", format: "webp" },
-            { scene: "normal", width: 360, height: 360, uniq_key: "360", format: "webp" },
-          ],
-        }
-      },
-    });
+  logger.info(`文生图任务已提交，history_id: ${historyId}，pre_gen_item_ids: ${preGenItemIds.join(', ')}，等待生成完成...`);
 
-    if (!response[historyId]) {
-      logger.error(`历史记录不存在: historyId=${historyId}`);
-      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
-    }
+  // 使用 get_local_item_list 接口轮询获取无水印图片
+  const imageUrls = await pollForImagesViaQuery(preGenItemIds, refreshToken, historyId);
 
-    const taskInfo = response[historyId];
-    return {
-      status: {
-        status: taskInfo.status,
-        failCode: taskInfo.fail_code,
-        itemCount: (taskInfo.item_list || []).length,
-        finishTime: taskInfo.task?.finish_time || 0,
-        historyId
-      } as PollingStatus,
-      data: taskInfo
-    };
-  }, historyId);
-
-  const item_list = finalTaskInfo.item_list || [];
-  const imageUrls = extractImageUrls(item_list);
-
-  if (imageUrls.length === 0 && item_list.length > 0) {
-    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图像生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
+  if (imageUrls.length === 0) {
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `图像生成失败: 未能获取到任何图片URL`);
   }
 
-  logger.info(`图像生成完成: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
+  logger.info(`图像生成完成: 成功生成 ${imageUrls.length} 张无水印图片`);
 
   return imageUrls;
 }
@@ -523,65 +536,24 @@ async function generateJimeng4xMultiImages(
   );
 
   const historyId = aigc_data?.history_record_id;
+  const preGenItemIds = aigc_data?.pre_gen_item_ids;
+
   if (!historyId)
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录ID不存在");
 
-  logger.info(`多图生成任务已提交，submit_id: ${submitId}, history_id: ${historyId}，等待生成 ${targetImageCount} 张图片...`);
+  if (!preGenItemIds || preGenItemIds.length === 0)
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "pre_gen_item_ids 不存在");
 
-  // 轮询结果
-  const poller = new SmartPoller({
-    maxPollCount: 600,
-    expectedItemCount: targetImageCount,
-    type: 'image'
-  });
+  logger.info(`多图生成任务已提交，submit_id: ${submitId}, history_id: ${historyId}，pre_gen_item_ids: ${preGenItemIds.join(', ')}，等待生成 ${targetImageCount} 张图片...`);
 
-  const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {
-    const result = await request("post", "/mweb/v1/get_history_by_ids", refreshToken, {
-      data: {
-        history_ids: [historyId],
-        image_info: {
-          width: 2048,
-          height: 2048,
-          format: "webp",
-          image_scene_list: [
-            { scene: "smart_crop", width: 360, height: 360, uniq_key: "smart_crop-w:360-h:360", format: "webp" },
-            { scene: "smart_crop", width: 480, height: 480, uniq_key: "smart_crop-w:480-h:480", format: "webp" },
-            { scene: "smart_crop", width: 720, height: 720, uniq_key: "smart_crop-w:720-h:720", format: "webp" },
-            { scene: "smart_crop", width: 720, height: 480, uniq_key: "smart_crop-w:720-h:480", format: "webp" },
-            { scene: "normal", width: 2400, height: 2400, uniq_key: "2400", format: "webp" },
-            { scene: "normal", width: 1080, height: 1080, uniq_key: "1080", format: "webp" },
-            { scene: "normal", width: 720, height: 720, uniq_key: "720", format: "webp" },
-            { scene: "normal", width: 480, height: 480, uniq_key: "480", format: "webp" },
-            { scene: "normal", width: 360, height: 360, uniq_key: "360", format: "webp" },
-          ],
-        },
-      },
-    });
+  // 使用 get_local_item_list 接口轮询获取无水印图片
+  const imageUrls = await pollForImagesViaQuery(preGenItemIds, refreshToken, historyId);
 
-    if (!result[historyId])
-      throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录不存在");
-
-    const taskInfo = result[historyId];
-    return {
-      status: {
-        status: taskInfo.status,
-        failCode: taskInfo.fail_code,
-        itemCount: (taskInfo.item_list || []).length,
-        finishTime: taskInfo.task?.finish_time || 0,
-        historyId
-      } as PollingStatus,
-      data: taskInfo
-    };
-  }, historyId);
-
-  const item_list = finalTaskInfo.item_list || [];
-  const imageUrls = extractImageUrls(item_list);
-
-  if (imageUrls.length === 0 && item_list.length > 0) {
-    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `多图生成失败: item_list有 ${item_list.length} 个项目，但无法提取任何图片URL`);
+  if (imageUrls.length === 0) {
+    throw new APIException(EX.API_IMAGE_GENERATION_FAILED, `多图生成失败: 未能获取到任何图片URL`);
   }
 
-  logger.info(`多图生成结果: 成功生成 ${imageUrls.length} 张图片，总耗时 ${pollingResult.elapsedTime} 秒，最终状态: ${pollingResult.status}`);
+  logger.info(`多图生成结果: 成功生成 ${imageUrls.length} 张无水印图片`);
   return imageUrls;
 }
 
