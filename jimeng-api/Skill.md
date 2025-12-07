@@ -107,12 +107,12 @@ python scripts/generate_image.py text \
 - `prompt` (required): Text description of the desired image
 - `--session-id`: Jimeng session ID (required)
 - `--model`: Model to use (default: `jimeng-4.0`)
-  - Options: `jimeng-4.0`, `jimeng-3.1`, `jimeng-3.0`, `jimeng-2.1`, `jimeng-xl-pro`, `nanobanana` (international only)
+  - Options: `jimeng-4.5`, `jimeng-4.0`, `jimeng-3.1`, `jimeng-3.0`, `jimeng-2.1`, `jimeng-xl-pro`, `nanobanana` (international only)
 - `--ratio`: Aspect ratio (default: `1:1`)
   - Options: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`
 - `--resolution`: Resolution level (default: `2k`)
   - Options: `1k`, `2k`, `4k`
-- `--intelligent-ratio`: Enable smart ratio detection based on prompt keywords **⚠️ Only works for jimeng-4.0 model; other models will ignore this parameter**
+- `--intelligent-ratio`: Enable smart ratio detection based on prompt keywords **⚠️ Only works for jimeng-4.0/jimeng-4.1/jimeng-4.5 models; other models will ignore this parameter**
 - `--negative-prompt`: Negative prompt (elements to avoid)
 - `--sample-strength`: Sampling strength (0.0-1.0)
 - `--api-url`: Custom API URL (default: `http://localhost:5100`)
@@ -155,7 +155,7 @@ python scripts/generate_image.py image \
 
 ### Intelligent Ratio Detection
 
-**⚠️ IMPORTANT**: This feature only works with the `jimeng-4.0` model. Other models (jimeng-3.0, nanobanana, etc.) will ignore the `--intelligent-ratio` flag.
+**⚠️ IMPORTANT**: This feature only works with the `jimeng-4.0`, `jimeng-4.1`, and `jimeng-4.5` models. Other models (jimeng-3.0, nanobanana, etc.) will ignore the `--intelligent-ratio` flag.
 
 Use `--intelligent-ratio` to automatically select the best aspect ratio based on prompt keywords.
 
@@ -276,9 +276,9 @@ Script executes:
 - If you need full control over resolution and ratio, use `jimeng-4.0` model instead
 
 **"intelligent_ratio not working"**
-- The `--intelligent-ratio` flag only works with `jimeng-4.0` model
+- The `--intelligent-ratio` flag only works with `jimeng-4.0`, `jimeng-4.1`, and `jimeng-4.5` models
 - Other models (jimeng-3.0, nanobanana, etc.) will ignore this parameter
-- Solution: Use `jimeng-4.0` if you need intelligent ratio detection
+- Solution: Use `jimeng-4.0`, `jimeng-4.1`, or `jimeng-4.5` if you need intelligent ratio detection
 
 ## Best Practices
 

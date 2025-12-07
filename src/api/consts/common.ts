@@ -39,6 +39,7 @@ export const DRAFT_MIN_VERSION = "3.0.2";
 
 // 图像模型映射
 export const IMAGE_MODEL_MAP = {
+  "jimeng-4.5": "high_aes_general_v40l",
   "jimeng-4.1": "high_aes_general_v41",
   "jimeng-4.0": "high_aes_general_v40",
   "jimeng-3.1": "high_aes_general_v30l_art_fangzhou:general_v3.0_18b",
