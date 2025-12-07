@@ -30,7 +30,8 @@ export const PLATFORM_CODE = "7";
 export const VERSION_CODE = "5.8.0";
 
 // 默认模型
-export const DEFAULT_IMAGE_MODEL = "jimeng-4.1";
+export const DEFAULT_IMAGE_MODEL = "jimeng-4.5";
+export const DEFAULT_IMAGE_MODEL_US = "jimeng-4.0";
 export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.0";
 
 // 草稿版本

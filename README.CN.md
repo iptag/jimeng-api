@@ -218,7 +218,7 @@ Claude: [自动调用 skill,生成图片并保存到 /pic 目录]
 **POST** `/v1/images/generations`
 
 **请求参数**:
-- `model` (string): 使用的模型名称
+- `model` (string, 可选): 使用的模型名称。国内站默认 `jimeng-4.5`，国际站（US/HK/JP/SG）默认 `jimeng-4.0`。
 - `prompt` (string): 图像描述文本
 - `ratio` (string, 可选): 图像比例，默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`。**注意**: 当 `intelligent_ratio` 为 `true` 时，此参数将被忽略，系统会根据提示词自动推断最佳比例。
 - `resolution` (string, 可选): 分辨率级别，默认为 `"2k"`。支持的分辨率: `1k`, `2k`, `4k`。
@@ -319,7 +319,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 ```
 
 **请求参数**:
-- `model` (string): 使用的模型名称
+- `model` (string, 可选): 使用的模型名称。国内站默认 `jimeng-4.5`，国际站（US/HK/JP/SG）默认 `jimeng-4.0`。
 - `prompt` (string): 图像描述文本，用于指导生成方向
 - `images` (array): 输入图片数组
 - `ratio` (string, 可选): 图像比例，默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`。

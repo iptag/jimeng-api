@@ -216,7 +216,7 @@ For detailed usage, please refer to `jimeng-api/Skill.md`.
 **POST** `/v1/images/generations`
 
 **Request Parameters**:
-- `model` (string): The name of the model to use.
+- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for domestic site, `jimeng-4.0` for international sites (US/HK/JP/SG).
 - `prompt` (string): The text description of the image.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. **Note**: When `intelligent_ratio` is `true`, this parameter will be ignored and the system will automatically infer the optimal ratio from the prompt.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
@@ -306,7 +306,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 ```
 
 **Request Parameters**:
-- `model` (string): The name of the model to use.
+- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for domestic site, `jimeng-4.0` for international sites (US/HK/JP/SG).
 - `prompt` (string): Text description of the image to guide the generation.
 - `images` (array): An array of input images.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
