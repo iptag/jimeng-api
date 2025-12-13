@@ -218,7 +218,7 @@ Claude: [自动调用 skill,生成图片并保存到 /pic 目录]
 **POST** `/v1/images/generations`
 
 **请求参数**:
-- `model` (string, 可选): 使用的模型名称。国内站默认 `jimeng-4.5`，国际站（US/HK/JP/SG）默认 `jimeng-4.0`。
+- `model` (string, 可选): 使用的模型名称。国内站和国际站（US/HK/JP/SG）均默认 `jimeng-4.5`。
 - `prompt` (string): 图像描述文本
 - `ratio` (string, 可选): 图像比例，默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`。**注意**: 当 `intelligent_ratio` 为 `true` 时，此参数将被忽略，系统会根据提示词自动推断最佳比例。
 - `resolution` (string, 可选): 分辨率级别，默认为 `"2k"`。支持的分辨率: `1k`, `2k`, `4k`。
@@ -263,7 +263,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 **支持的模型**:
 - `nanobananapro`: 仅国际站支持，支持`ratio` 和`resolution`参数
 - `nanobanana`: 仅国际站支持
-- `jimeng-4.5`: 仅国内站支持，支持 2k/4k 全部 ratio 及 intelligent_ratio
+- `jimeng-4.5`: 国内、国际站均支持，支持 2k/4k 全部 ratio 及 intelligent_ratio **（所有站点默认模型）**
 - `jimeng-4.1`: 仅国内站支持，支持 2k/4k 全部 ratio 及 intelligent_ratio
 - `jimeng-4.0`: 国内、国际站均支持
 - `jimeng-3.1`: 仅国内站支持
@@ -319,7 +319,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 ```
 
 **请求参数**:
-- `model` (string, 可选): 使用的模型名称。国内站默认 `jimeng-4.5`，国际站（US/HK/JP/SG）默认 `jimeng-4.0`。
+- `model` (string, 可选): 使用的模型名称。国内站和国际站（US/HK/JP/SG）均默认 `jimeng-4.5`。
 - `prompt` (string): 图像描述文本，用于指导生成方向
 - `images` (array): 输入图片数组
 - `ratio` (string, 可选): 图像比例，默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`。
@@ -332,7 +332,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 **使用限制**:
 - 输入图片数量: 1-10张
 - 支持的图片格式: JPG, PNG, WebP等常见格式
-- 图片大小限制: 建议单张图片不超过10MB
+- 图片大小限制: 建议单张图片不超过100MB
 - 生成时间: 通常30秒-5分钟，复杂合成可能需要更长时间
 
 **使用示例**:
@@ -386,7 +386,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 #### ❓ **常见问题与解决方案**
 
 **Q: 图片上传失败怎么办？**
-A: 检查图片URL是否可访问，确保图片格式正确，文件大小不超过10MB。
+A: 检查图片URL是否可访问，确保图片格式正确，文件大小不超过100MB。
 
 **Q: 生成时间过长怎么办？**
 A: 复杂的多图合成需要更长时间，建议耐心等待。如果超过10分钟仍未完成，可以重新提交请求。

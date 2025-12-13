@@ -114,7 +114,7 @@ export function getBenefitCount(
   if (regionKey === "CN") return undefined;
 
   if (regionKey === "US") {
-    return ["jimeng-4.0", "jimeng-3.0"].includes(userModel) ? 4 : undefined;
+    return ["jimeng-4.5", "jimeng-4.0", "jimeng-3.0"].includes(userModel) ? 4 : undefined;
   }
 
   if (regionKey === "HK" || regionKey === "JP" || regionKey === "SG") {

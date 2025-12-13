@@ -31,7 +31,7 @@ export const VERSION_CODE = "5.8.0";
 
 // 默认模型
 export const DEFAULT_IMAGE_MODEL = "jimeng-4.5";
-export const DEFAULT_IMAGE_MODEL_US = "jimeng-4.0";
+export const DEFAULT_IMAGE_MODEL_US = "jimeng-4.5";
 export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.0";
 
 // 草稿版本
@@ -53,6 +53,7 @@ export const IMAGE_MODEL_MAP = {
 };
 
 export const IMAGE_MODEL_MAP_US = {
+  "jimeng-4.5": "high_aes_general_v40l",
   "jimeng-4.0": "high_aes_general_v40",
   "jimeng-3.0": "high_aes_general_v30l:general_v3.0_18b",
   "nanobanana": "external_model_gemini_flash_image_v25",
