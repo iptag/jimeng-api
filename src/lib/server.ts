@@ -114,7 +114,7 @@ class Server {
                 await koaBody(Object.assign(_.clone(config.system.requestBody), {
                     multipart: true, // 开启multipart文件上传
                     formidable: {
-                        maxFileSize: 10 * 1024 * 1024, // 限制最大10MB
+                        maxFileSize: 100 * 1024 * 1024, // 限制最大100MB
                     },
                     enableTypes: ['json', 'form', 'text', 'xml'] // 确保form类型被启用
                 }))(ctx, next);

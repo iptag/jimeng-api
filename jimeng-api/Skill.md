@@ -107,7 +107,7 @@ python scripts/generate_image.py text \
 - `prompt` (required): Text description of the desired image
 - `--session-id`: Jimeng session ID (required)
 - `--model`: Model to use (default: `jimeng-4.0`)
-  - Options: `jimeng-4.5`, `jimeng-4.0`, `jimeng-3.1`, `jimeng-3.0`, `jimeng-2.1`, `jimeng-xl-pro`, `nanobanana` (international only)
+  - Options: `jimeng-4.5`, `jimeng-4.1`, `jimeng-4.0`, `jimeng-3.1`, `jimeng-3.0`, `jimeng-2.1`, `jimeng-xl-pro`, `nanobanana` (international only)
 - `--ratio`: Aspect ratio (default: `1:1`)
   - Options: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`
 - `--resolution`: Resolution level (default: `2k`)

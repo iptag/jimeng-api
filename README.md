@@ -36,7 +36,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-4.0\", \"prompt\": \"A beautiful girl, film-like feel\", \"ratio\": \"4:3\", \"resolution\": \"2k\"}"
+    "{\"model\": \"jimeng-4.5\", \"prompt\": \"A beautiful girl, film-like feel\", \"ratio\": \"4:3\", \"resolution\": \"2k\"}"
 ```
 
 **Supported resolutions**: `1k`, `2k`, `4k`
@@ -216,7 +216,7 @@ For detailed usage, please refer to `jimeng-api/Skill.md`.
 **POST** `/v1/images/generations`
 
 **Request Parameters**:
-- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for domestic site, `jimeng-4.0` for international sites (US/HK/JP/SG).
+- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for both domestic and international sites (US/HK/JP/SG).
 - `prompt` (string): The text description of the image.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. **Note**: When `intelligent_ratio` is `true`, this parameter will be ignored and the system will automatically infer the optimal ratio from the prompt.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
@@ -231,27 +231,27 @@ curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-4.0\", \"prompt\": \"A cute little cat\"}"
+    "{\"model\": \"jimeng-4.5\", \"prompt\": \"A cute little cat\"}"
 
 # Example using 4K resolution
 curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-4.0\", \"prompt\": \"Magnificent landscape, ultra-high resolution\", \"ratio\": \"16:9\", \"resolution\": \"4k\"}"
+    "{\"model\": \"jimeng-4.5\", \"prompt\": \"Magnificent landscape, ultra-high resolution\", \"ratio\": \"16:9\", \"resolution\": \"4k\"}"
 
 # Example using intelligent ratio (system will infer 9:16 from "portrait")
 curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-4.0\", \"prompt\": \"A running lion, portrait orientation\", \"resolution\": \"2k\", \"intelligent_ratio\": true}"
+    "{\"model\": \"jimeng-4.5\", \"prompt\": \"A running lion, portrait orientation\", \"resolution\": \"2k\", \"intelligent_ratio\": true}"
 ```
 
 **Supported Models**:
 - `nanobananapro`: Only supported on the international site, supporting `ratio` and `resolution`.
 - `nanobanana`: Only supported on the international site.
-- `jimeng-4.5`: Only supported on the domestic site, supports all 2k/4k ratios and intelligent_ratio.
+- `jimeng-4.5`: Supported on both domestic and international sites, supports all 2k/4k ratios and intelligent_ratio. **(Default for all sites)**
 - `jimeng-4.1`: Only supported on the domestic site, supports all 2k/4k ratios and intelligent_ratio.
 - `jimeng-4.0`: Supported on both domestic and international sites.
 - `jimeng-3.1`: Only supported on the domestic site.
@@ -301,12 +301,12 @@ curl -X POST http://localhost:5100/v1/images/generations \
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer us-YOUR_SESSION_ID" \
   -F "prompt=A cute cat, anime style" \
-  -F "model=jimeng-4.0" \
+  -F "model=jimeng-4.5" \
   -F "images=@/path/to/your/local/cat.jpg"
 ```
 
 **Request Parameters**:
-- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for domestic site, `jimeng-4.0` for international sites (US/HK/JP/SG).
+- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for both domestic and international sites (US/HK/JP/SG).
 - `prompt` (string): Text description of the image to guide the generation.
 - `images` (array): An array of input images.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
@@ -319,7 +319,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 **Usage Restrictions**:
 - Number of input images: 1-10
 - Supported image formats: Common formats like JPG, PNG, WebP, etc.
-- Image size limit: Recommended not to exceed 10MB per image.
+- Image size limit: Recommended not to exceed 100MB per image.
 - Generation time: Usually 30 seconds to 5 minutes, complex compositions may take longer.
 
 **Usage Examples**:
@@ -330,13 +330,13 @@ curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-4.0\", \"prompt\": \"Convert this photo into an oil painting style, with vibrant colors and distinct brushstrokes\", \"images\": [\"https://example.com/photo.jpg\"], \"ratio\": \"1:1\", \"resolution\": \"2k\", \"sample_strength\": 0.7}"
+    "{\"model\": \"jimeng-4.5\", \"prompt\": \"Convert this photo into an oil painting style, with vibrant colors and distinct brushstrokes\", \"images\": [\"https://example.com/photo.jpg\"], \"ratio\": \"1:1\", \"resolution\": \"2k\", \"sample_strength\": 0.7}"
 
 # Example 2: Local single file upload (using multipart/form-data)
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -F "prompt=A cute cat, anime style" \
-  -F "model=jimeng-4.0" \
+  -F "model=jimeng-4.5" \
   -F "ratio=1:1" \
   -F "resolution=1k" \
   -F "images=@/path/to/your/local/cat.jpg"
@@ -345,7 +345,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -F "prompt=Merge these two images" \
-  -F "model=jimeng-4.0" \
+  -F "model=jimeng-4.5" \
   -F "images=@/path/to/your/image1.jpg" \
   -F "images=@/path/to/your/image2.png"
 ```
@@ -367,7 +367,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 #### ❓ **FAQ & Solutions**
 
 **Q: What to do if image upload fails?**
-A: Check if the image URL is accessible, ensure the image format is correct, and the file size does not exceed 10MB.
+A: Check if the image URL is accessible, ensure the image format is correct, and the file size does not exceed 100MB.
 
 **Q: What to do if generation takes too long?**
 A: Complex multi-image compositions take longer. Please be patient. If it's not completed after 10 minutes, you can resubmit the request.
@@ -470,7 +470,7 @@ curl -X POST http://localhost:5100/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
-    "{\"model\": \"jimeng-4.0\", \"messages\": [ { \"role\": \"user\", \"content\": \"Draw a landscape painting\" } ]}"
+    "{\"model\": \"jimeng-4.5\", \"messages\": [ { \"role\": \"user\", \"content\": \"Draw a landscape painting\" } ]}"
 ```
 
 ## 🔍 API Response Format
@@ -496,7 +496,7 @@ curl -X POST http://localhost:5100/v1/chat/completions \
   "id": "chatcmpl-123",
   "object": "chat.completion",
   "created": 1759058768,
-  "model": "jimeng-4.0",
+  "model": "jimeng-4.5",
   "choices": [
     {
       "index": 0,
@@ -517,9 +517,9 @@ curl -X POST http://localhost:5100/v1/chat/completions \
 
 ### Stream Response (SSE)
 ```
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.0","choices":[{"index":0,"delta":{"role":"assistant","content":"🎨 Generating image, please wait..."},"finish_reason":null}]}
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":0,"delta":{"role":"assistant","content":"🎨 Generating image, please wait..."},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.0","choices":[{"index":1,"delta":{"role":"assistant","content":"![image](https://example.com/image.jpg)"},"finish_reason":"stop"}]}
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":1,"delta":{"role":"assistant","content":"![image](https://example.com/image.jpg)"},"finish_reason":"stop"}]}
 
 data: [DONE]
 ```
