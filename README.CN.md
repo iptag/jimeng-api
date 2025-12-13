@@ -34,7 +34,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d '{
-    "model": "jimeng-4.0",
+    "model": "jimeng-4.5",
     "prompt": "美丽的少女，胶片感",
     "ratio": "4:3",
     "resolution": "2k"
