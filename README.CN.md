@@ -233,7 +233,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d '{
-    "model": "jimeng-4.0",
+    "model": "jimeng-4.5",
     "prompt": "一只可爱的小猫咪"
   }'
 
@@ -242,7 +242,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d '{
-    "model": "jimeng-4.0",
+    "model": "jimeng-4.5",
     "prompt": "壮丽的山水风景，超高分辨率",
     "ratio": "16:9",
     "resolution": "4k"
@@ -253,7 +253,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d '{
-    "model": "jimeng-4.0",
+    "model": "jimeng-4.5",
     "prompt": "奔跑的狮子，竖屏",
     "resolution": "2k",
     "intelligent_ratio": true
@@ -314,7 +314,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer us-YOUR_SESSION_ID" \
   -F "prompt=A cute cat, anime style" \
-  -F "model=jimeng-4.0" \
+  -F "model=jimeng-4.5" \
   -F "images=@/path/to/your/local/cat.jpg"
 ```
 
@@ -343,7 +343,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d '{
-    "model": "jimeng-4.0",
+    "model": "jimeng-4.5",
     "prompt": "将这张照片转换为油画风格，色彩鲜艳，笔触明显",
     "images": ["https://example.com/photo.jpg"],
     "ratio": "1:1",
@@ -355,7 +355,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -F "prompt=一只可爱的猫，动漫风格" \
-  -F "model=jimeng-4.0" \
+  -F "model=jimeng-4.5" \
   -F "ratio=1:1" \
   -F "resolution=1k" \
   -F "images=@/path/to/your/local/cat.jpg"
@@ -364,7 +364,7 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 curl -X POST http://localhost:5100/v1/images/compositions \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -F "prompt=融合这两张图片" \
-  -F "model=jimeng-4.0" \
+  -F "model=jimeng-4.5" \
   -F "images=@/path/to/your/image1.jpg" \
   -F "images=@/path/to/your/image2.png"
 ```
@@ -499,7 +499,7 @@ curl -X POST http://localhost:5100/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d '{
-    "model": "jimeng-4.0",
+    "model": "jimeng-4.5",
     "messages": [
       {
         "role": "user",
@@ -532,7 +532,7 @@ curl -X POST http://localhost:5100/v1/chat/completions \
   "id": "chatcmpl-123",
   "object": "chat.completion",
   "created": 1759058768,
-  "model": "jimeng-4.0",
+  "model": "jimeng-4.5",
   "choices": [
     {
       "index": 0,
@@ -553,9 +553,9 @@ curl -X POST http://localhost:5100/v1/chat/completions \
 
 ### 流式响应 (SSE)
 ```
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.0","choices":[{"index":0,"delta":{"role":"assistant","content":"🎨 图像生成中，请稍候..."},"finish_reason":null}]}
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":0,"delta":{"role":"assistant","content":"🎨 图像生成中，请稍候..."},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.0","choices":[{"index":1,"delta":{"role":"assistant","content":"![image](https://example.com/image.jpg)"},"finish_reason":"stop"}]}
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":1,"delta":{"role":"assistant","content":"![image](https://example.com/image.jpg)"},"finish_reason":"stop"}]}
 
 data: [DONE]
 ```
