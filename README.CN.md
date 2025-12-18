@@ -436,6 +436,8 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 > - **重要**：一旦提供图片输入（图生视频或首尾帧视频），`ratio` 参数将被忽略，视频比例将由输入图片的实际比例决定。`resolution` 参数仍然有效。
 
 **支持的视频模型**:
+- `jimeng-video-3.5-pro` - 专业版v3.5 **（默认）**
+- `jimeng-video-3.5` - 标准版v3.5
 - `jimeng-video-3.0-pro` - 专业版
 - `jimeng-video-3.0` - 标准版
 - `jimeng-video-3.0-fast` - 极速版（仅国内站支持）
@@ -507,6 +509,61 @@ curl -X POST http://localhost:5100/v1/chat/completions \
       }
     ]
   }'
+```
+
+### Token API
+
+#### 检查Token状态
+
+**POST** `/token/check`
+
+检查token是否有效。
+
+**请求参数**:
+- `token` (string): 要检查的session token
+
+#### 获取积分信息
+
+**POST** `/token/points`
+
+获取一个或多个token的当前积分余额。
+
+**请求头**:
+- `Authorization`: Bearer token，多个token用逗号分隔
+
+#### 领取每日积分
+
+**POST** `/token/receive`
+
+手动触发每日积分领取（签到）。无论领取是否成功，都会返回最新的积分信息。
+
+**请求头**:
+- `Authorization`: Bearer token，多个token用逗号分隔
+
+**响应格式**:
+```json
+[
+  {
+    "token": "your_token",
+    "credits": {
+      "giftCredit": 10,
+      "purchaseCredit": 0,
+      "vipCredit": 0,
+      "totalCredit": 10
+    }
+  }
+]
+```
+
+**使用示例**:
+```bash
+# 单个token
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer YOUR_SESSION_ID"
+
+# 多个token批量签到
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer TOKEN1,TOKEN2,TOKEN3"
 ```
 
 ## 🔍 API响应格式

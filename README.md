@@ -417,6 +417,8 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 > - **Important**: Once image input is provided (image-to-video or first-last frame video), the `ratio` parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio. The `resolution` parameter remains effective.
 
 **Supported Video Models**:
+- `jimeng-video-3.5-pro` - Professional Edition v3.5 **(Default)**
+- `jimeng-video-3.5` - Standard Edition v3.5
 - `jimeng-video-3.0-pro` - Professional Edition
 - `jimeng-video-3.0` - Standard Edition
 - `jimeng-video-3.0-fast` - Fast Edition (China site only)
@@ -471,6 +473,61 @@ curl -X POST http://localhost:5100/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
     "{\"model\": \"jimeng-4.5\", \"messages\": [ { \"role\": \"user\", \"content\": \"Draw a landscape painting\" } ]}"
+```
+
+### Token API
+
+#### Check Token Status
+
+**POST** `/token/check`
+
+Check if a token is valid and active.
+
+**Request Parameters**:
+- `token` (string): The session token to check
+
+#### Get Credit Points
+
+**POST** `/token/points`
+
+Get the current credit balance for one or more tokens.
+
+**Request Headers**:
+- `Authorization`: Bearer token(s), multiple tokens separated by commas
+
+#### Receive Daily Credits
+
+**POST** `/token/receive`
+
+Manually trigger daily credit collection (check-in). Attempts to claim credits and returns the latest credit information regardless of claim success.
+
+**Request Headers**:
+- `Authorization`: Bearer token(s), multiple tokens separated by commas
+
+**Response Format**:
+```json
+[
+  {
+    "token": "your_token",
+    "credits": {
+      "giftCredit": 10,
+      "purchaseCredit": 0,
+      "vipCredit": 0,
+      "totalCredit": 10
+    }
+  }
+]
+```
+
+**Usage Example**:
+```bash
+# Single token
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer YOUR_SESSION_ID"
+
+# Multiple tokens
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer TOKEN1,TOKEN2,TOKEN3"
 ```
 
 ## 🔍 API Response Format

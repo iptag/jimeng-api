@@ -17,6 +17,16 @@ export function getModel(model: string) {
   return VIDEO_MODEL_MAP[model] || VIDEO_MODEL_MAP[DEFAULT_MODEL];
 }
 
+function getVideoBenefitType(model: string): string {
+  if (model.includes("3.5_pro")) {
+    return "dreamina_video_seedance_15_pro";
+  }
+  if (model.includes("3.5")) {
+    return "dreamina_video_seedance_15";
+  }
+  return "basic_video_operation_vgfm_v_three";
+}
+
 // 处理本地上传的文件
 async function uploadImageFromFile(file: any, refreshToken: string, regionInfo: RegionInfo): Promise<string> {
   try {
@@ -195,13 +205,27 @@ export async function generateVideo(
   // 通过 first_frame_image 和 end_frame_image 是否为 undefined 来区分模式
   const functionMode = "first_last_frames";
 
+  const sceneOption = {
+    type: "video",
+    scene: "BasicVideoGenerateButton",
+    modelReqKey: model,
+    videoDuration: duration,
+    reportParams: {
+      enterSource: "generate",
+      vipSource: "generate",
+      extraVipFunctionKey: model,
+      useVipFunctionDetailsReporterHoc: true,
+    },
+  };
+
   const metricsExtra = JSON.stringify({
-    "promptSource": "custom",
-    "isDefaultSeed": 1,
-    "originSubmitId": originSubmitId,
-    "isRegenerate": false,
-    "enterFrom": "click",
-    "functionMode": functionMode
+    promptSource: "custom",
+    isDefaultSeed: 1,
+    originSubmitId: originSubmitId,
+    isRegenerate: false,
+    enterFrom: "click",
+    functionMode: functionMode,
+    sceneOptions: JSON.stringify([sceneOption]),
   });
 
   // 当有图片输入时，ratio参数会被图片的实际比例覆盖
@@ -225,15 +249,15 @@ export async function generateVideo(
       },
       data: {
         "extend": {
-          "root_model": end_frame_image ? VIDEO_MODEL_MAP['jimeng-video-3.0'] : model,
+          "root_model": model,
           "m_video_commerce_info": {
-            benefit_type: "basic_video_operation_vgfm_v_three",
+            benefit_type: getVideoBenefitType(model),
             resource_id: "generate_video",
             resource_id_type: "str",
             resource_sub_type: "aigc"
           },
           "m_video_commerce_info_list": [{
-            benefit_type: "basic_video_operation_vgfm_v_three",
+            benefit_type: getVideoBenefitType(model),
             resource_id: "generate_video",
             resource_id_type: "str",
             resource_sub_type: "aigc"
