@@ -11,7 +11,7 @@
 - 🎨 **AI Image Generation**: Supports multiple models and resolutions (default 2K, supports 4K, 1K).
 - 🖼️ **Image-to-Image Synthesis**: Supports local images or image URLs.
 - 🎬 **AI Video Generation**: Supports text-to-video generation, and adds local image upload for image-to-video on the China site.
-- 🌐 **International Site Support**: Added support for text-to-image and image-to-image APIs for the Dreamina international site. Please file an issue if you encounter problems.
+- 🌐 **International Site Support**: Added support for text-to-image and image-to-image APIs on Dreamina international sites. Open an issue if you run into problems.
 - 🔄 **Smart Polling**: Adaptive polling mechanism to optimize generation efficiency.
 - 🛡️ **Unified Exception Handling**: Comprehensive error handling and retry mechanism.
 - 📊 **Detailed Logs**: Structured logging for easy debugging.
@@ -21,15 +21,15 @@
 ## ⚠ Risk Warning
 
 - This project is for research and educational purposes only. It does not accept any financial donations or transactions!
-- For personal use and research only. Avoid putting pressure on the official servers. Violators may have their accounts banned or, in serious cases, break the law!
-- For personal use and research only. Avoid putting pressure on the official servers. Violators may have their accounts banned or, in serious cases, break the law!
-- For personal use and research only. Avoid putting pressure on the official servers. Violators may have their accounts banned or, in serious cases, break the law!
+- For personal use and research only. Avoid putting pressure on the official servers. Abuse may result in account bans or legal action.
+- For personal use and research only. Avoid putting pressure on the official servers. Abuse may result in account bans or legal action.
+- For personal use and research only. Avoid putting pressure on the official servers. Abuse may result in account bans or legal action.
 
 ## ✨ New Feature Highlights
 
 ### 📐 `ratio` and `resolution` Parameter Support
 
-Image dimensions are now controlled by the `ratio` and `resolution` parameters, providing greater flexibility. The default `resolution` is set to `2k`.
+Image dimensions are now controlled by the `ratio` and `resolution` parameters, giving you more flexibility. The default `resolution` is set to `2k`.
 
 ```bash
 curl -X POST http://localhost:5100/v1/images/generations \
@@ -46,19 +46,19 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ## 🚀 Quick Start
 
 ### Getting `sessionid`
-- The method for obtaining the `sessionid` is the same for the domestic site (Jimeng), international site (Dreamina), as shown in the image below.
-> **Note 1**: The API endpoints are the same for domestic and international sites, but require different prefixes to distinguish:
-> - **Domestic site**: Use sessionid directly, e.g., `Bearer your_session_id`
+- Getting your `sessionid` works the same way on both the China site (Jimeng) and international sites (Dreamina) — see the screenshot below.
+> **Note 1**: The API endpoints are the same for the China site and international sites, but use different prefixes:
+> - **China site**: Use the `sessionid` directly, e.g., `Bearer your_session_id`
 > - **US site**: Add **us-** prefix, e.g., `Bearer us-your_session_id`
 > - **Hong Kong site**: Add **hk-** prefix, e.g., `Bearer hk-your_session_id`
 > - **Japan site**: Add **jp-** prefix, e.g., `Bearer jp-your_session_id`
 > - **Singapore site**: Add **sg-** prefix, e.g., `Bearer sg-your_session_id`
 >
-> **Note 2**: Domestic and international sites now support both *text-to-image* and *image-to-image*. The nanobanana and nanobananapro models have been added for the international site.
+> **Note 2**: The China site and international sites now support both *text-to-image* and *image-to-image*. The nanobanana and nanobananapro models are available on international sites.
 >
 > **Note 3**: Resolution rules when using the nanobanana model on international sites:
 > - **US site (us-)**: Images are fixed at **1024x1024** with **2k** resolution, ignoring user-provided ratio and resolution parameters
-> - **Hong Kong/Japan/Singapore sites (hk-/jp-/sg-)**: Fixed **1k** resolution, but supports custom ratio parameters (e.g., 16:9, 4:3, etc.)
+> - **Hong Kong/Japan/Singapore sites (hk-/jp-/sg-)**: Fixed **1k** resolution, but supports custom `ratio` values (e.g., 16:9, 4:3, etc.)
 
 ![](https://github.com/iptag/jimeng-api/blob/main/get_sessionid.png)
 
@@ -70,7 +70,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 
 ### Installation and Deployment
 
-#### Method 1: Docker Image Pull and Update (Recommended)
+#### Method 1: Pull and Update the Docker Image (Recommended)
 
 **Pull command**
 ```bash
@@ -145,7 +145,7 @@ docker exec -it jimeng-api sh
 - ✅ **Unified port**: Uses port 5100 both inside and outside the container
 - ✅ **Log management**: Structured log output
 
-### Configuration Description
+### Configuration
 
 #### `configs/dev/service.yml`
 ```yaml
@@ -207,7 +207,7 @@ User: "my sessionid is xxxxx，Generate a 2K 16:9 image of a futuristic city at 
 Claude: [Automatically invokes the skill, generates images, and saves to /pic directory]
 ```
 
-For detailed usage, please refer to `jimeng-api/Skill.md`.
+For more details, see `jimeng-api/Skill.md`.
 
 ## 📖 API Documentation
 
@@ -216,12 +216,12 @@ For detailed usage, please refer to `jimeng-api/Skill.md`.
 **POST** `/v1/images/generations`
 
 **Request Parameters**:
-- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for both domestic and international sites (US/HK/JP/SG).
+- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` on all sites (China/US/HK/JP/SG).
 - `prompt` (string): The text description of the image.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`. **Note**: When `intelligent_ratio` is `true`, this parameter will be ignored and the system will automatically infer the optimal ratio from the prompt.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
 - `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0/jimeng-4.1/jimeng-4.5 model; other models will ignore it.** When enabled, the system automatically infers the optimal image ratio from the prompt (e.g., "portrait" → 9:16, "landscape" → 16:9).
-- `negative_prompt` (string, optional): Negative prompt words.
+- `negative_prompt` (string, optional): Negative prompt.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").
 
@@ -249,14 +249,14 @@ curl -X POST http://localhost:5100/v1/images/generations \
 ```
 
 **Supported Models**:
-- `nanobananapro`: Only supported on the international site, supporting `ratio` and `resolution`.
-- `nanobanana`: Only supported on the international site.
-- `jimeng-4.5`: Supported on both domestic and international sites, supports all 2k/4k ratios and intelligent_ratio. **(Default for all sites)**
-- `jimeng-4.1`: Only supported on the domestic site, supports all 2k/4k ratios and intelligent_ratio.
-- `jimeng-4.0`: Supported on both domestic and international sites.
-- `jimeng-3.1`: Only supported on the domestic site.
-- `jimeng-3.0`: Supported on both domestic and international sites.
-- `jimeng-2.1`: Only supported on the domestic site.
+- `nanobananapro`: International sites only, supports `ratio` and `resolution`.
+- `nanobanana`: International sites only.
+- `jimeng-4.5`: Works on all sites, supports all 2k/4k ratios and intelligent_ratio. **(Default for all sites)**
+- `jimeng-4.1`: China site only, supports all 2k/4k ratios and intelligent_ratio.
+- `jimeng-4.0`: Works on all sites.
+- `jimeng-3.1`: China site only.
+- `jimeng-3.0`: Works on all sites.
+- `jimeng-2.1`: China site only.
 - `jimeng-xl-pro`
 
 **Supported Ratios and Corresponding Resolutions**:
@@ -291,7 +291,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 
 **POST** `/v1/images/compositions`
 
-**Function Description**: Generate a new image based on one or more input images, combined with a text prompt. Supports various creative modes like image blending, style transfer, and content synthesis.
+Generate a new image based on one or more input images, combined with a text prompt. Supports creative modes like image blending, style transfer, and content synthesis.
 
 ```bash
 # International site image-to-image example (local file upload)
@@ -306,21 +306,21 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 ```
 
 **Request Parameters**:
-- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` for both domestic and international sites (US/HK/JP/SG).
+- `model` (string, optional): The name of the model to use. Defaults to `jimeng-4.5` on all sites (China/US/HK/JP/SG).
 - `prompt` (string): Text description of the image to guide the generation.
 - `images` (array): An array of input images.
 - `ratio` (string, optional): The aspect ratio of the image, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`.
 - `resolution` (string, optional): The resolution level, defaults to `"2k"`. Supported resolutions: `1k`, `2k`, `4k`.
 - `intelligent_ratio` (boolean, optional): Whether to enable intelligent ratio, defaults to `false`. **⚠️ This parameter only works for the jimeng-4.0/jimeng-4.1/jimeng-4.5 model; other models will ignore it.** When enabled, the system automatically adjusts the output ratio based on the prompt and input images.
-- `negative_prompt` (string, optional): Negative prompt words.
+- `negative_prompt` (string, optional): Negative prompt.
 - `sample_strength` (number, optional): Sampling strength (0.0-1.0).
 - `response_format` (string, optional): Response format ("url"(default) or "b64_json").
 
-**Usage Restrictions**:
+**Limits**:
 - Number of input images: 1-10
-- Supported image formats: Common formats like JPG, PNG, WebP, etc.
+- Supported image formats: Common formats (JPG, PNG, WebP, etc.).
 - Image size limit: Recommended not to exceed 100MB per image.
-- Generation time: Usually 30 seconds to 5 minutes, complex compositions may take longer.
+- Generation time: Typically 30 seconds to 5 minutes; complex compositions may take longer.
 
 **Usage Examples**:
 
@@ -366,30 +366,30 @@ curl -X POST http://localhost:5100/v1/images/compositions \
 
 #### ❓ **FAQ & Solutions**
 
-**Q: What to do if image upload fails?**
-A: Check if the image URL is accessible, ensure the image format is correct, and the file size does not exceed 100MB.
+**Q: What if my upload fails?**
+A: Make sure the image URL is reachable, the format is supported, and the file size is under 100MB.
 
-**Q: What to do if generation takes too long?**
-A: Complex multi-image compositions take longer. Please be patient. If it's not completed after 10 minutes, you can resubmit the request.
+**Q: What if generation takes too long?**
+A: Complex multi-image compositions can take longer. If it still isn't done after 10 minutes, try resubmitting the request.
 
 **Q: How to improve composition quality?**
 A:
-- Use high-quality input images.
-- Write detailed and accurate prompts.
-- Adjust the `sample_strength` parameter appropriately.
-- Avoid using too many conflicting image styles.
+- Start with high-quality input images.
+- Write clear, detailed prompts.
+- Tune the `sample_strength` parameter.
+- Avoid mixing too many conflicting styles.
 
 **Q: What image formats are supported?**
-A: Common formats like JPG, PNG, WebP, GIF are supported. JPG or PNG are recommended.
+A: Common formats (JPG, PNG, WebP, GIF) work. JPG or PNG is recommended.
 
 **Q: Can I use local images?**
-A: Yes. Direct upload of local files is now supported. Please refer to the "Local file upload example" above. You can also continue to use the network image URL method.
+A: Yes—direct local file upload is supported. See the "Local single file upload" example above. You can also keep using image URLs.
 
 ### Video Generation
 
 **POST** `/v1/videos/generations`
 
-**Function Description**: Generate a video based on a text prompt (Text-to-Video), or combined with input start/end frame images (Image-to-Video). Supports three generation modes:
+Generate a video from a text prompt (Text-to-Video) or from start/end frame images (Image-to-Video). Supports three generation modes:
 
 1. **Text-to-Video**: Pure text prompt without any images
 2. **Image-to-Video**: Single image as the first frame
@@ -417,6 +417,8 @@ A: Yes. Direct upload of local files is now supported. Please refer to the "Loca
 > - **Important**: Once image input is provided (image-to-video or first-last frame video), the `ratio` parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio. The `resolution` parameter remains effective.
 
 **Supported Video Models**:
+- `jimeng-video-3.5-pro` - Professional Edition v3.5 **(Default)**
+- `jimeng-video-3.5` - Standard Edition v3.5
 - `jimeng-video-3.0-pro` - Professional Edition
 - `jimeng-video-3.0` - Standard Edition
 - `jimeng-video-3.0-fast` - Fast Edition (China site only)
@@ -471,6 +473,61 @@ curl -X POST http://localhost:5100/v1/chat/completions \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
     "{\"model\": \"jimeng-4.5\", \"messages\": [ { \"role\": \"user\", \"content\": \"Draw a landscape painting\" } ]}"
+```
+
+### Token API
+
+#### Check Token Status
+
+**POST** `/token/check`
+
+Check if a token is valid and active.
+
+**Request Parameters**:
+- `token` (string): The session token to check
+
+#### Get Credit Points
+
+**POST** `/token/points`
+
+Get the current credit balance for one or more tokens.
+
+**Request Headers**:
+- `Authorization`: Bearer token(s), multiple tokens separated by commas
+
+#### Receive Daily Credits
+
+**POST** `/token/receive`
+
+Manually trigger daily credit collection (check-in). Attempts to claim credits and returns the latest credit information regardless of claim success.
+
+**Request Headers**:
+- `Authorization`: Bearer token(s), multiple tokens separated by commas
+
+**Response Format**:
+```json
+[
+  {
+    "token": "your_token",
+    "credits": {
+      "giftCredit": 10,
+      "purchaseCredit": 0,
+      "vipCredit": 0,
+      "totalCredit": 10
+    }
+  }
+]
+```
+
+**Usage Example**:
+```bash
+# Single token
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer YOUR_SESSION_ID"
+
+# Multiple tokens
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer TOKEN1,TOKEN2,TOKEN3"
 ```
 
 ## 🔍 API Response Format
@@ -599,11 +656,11 @@ export const RETRY_CONFIG = {
 ### Common Issues
 
 1.  **JSON Parsing Error**
-    -   Check if the request body format is correct.
+    -   Make sure your request body is valid.
     -   The system will automatically fix common format issues.
 
 2.  **Invalid `sessionid`**
-    -   Re-obtain the `sessionid` for the corresponding site.
+    -   Get a fresh `sessionid` from the appropriate site.
     -   Check if the `sessionid` format is correct.
 
 3.  **Generation Timeout**
@@ -613,7 +670,7 @@ export const RETRY_CONFIG = {
 
 4.  **Insufficient Credits**
     -   Go to the Jimeng/Dreamina official website to check your credit balance.
-    -   The system will provide detailed credit status information.
+    -   The API returns detailed credit info.
 
 ## 🙏 Acknowledgements
 

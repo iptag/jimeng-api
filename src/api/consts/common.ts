@@ -32,10 +32,10 @@ export const VERSION_CODE = "5.8.0";
 // 默认模型
 export const DEFAULT_IMAGE_MODEL = "jimeng-4.5";
 export const DEFAULT_IMAGE_MODEL_US = "jimeng-4.5";
-export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.0";
+export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.5-pro";
 
 // 草稿版本
-export const DRAFT_VERSION = "3.3.4";
+export const DRAFT_VERSION = "3.3.7";
 export const DRAFT_MIN_VERSION = "3.0.2";
 
 // 图像模型映射
@@ -62,6 +62,8 @@ export const IMAGE_MODEL_MAP_US = {
 
 // 视频模型映射
 export const VIDEO_MODEL_MAP = {
+  "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
+  "jimeng-video-3.5": "dreamina_ic_generate_video_model_vgfm_3.5",
   "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
   "jimeng-video-3.0-fast": "dreamina_ic_generate_video_model_vgfm_3.0_fast",

@@ -436,6 +436,8 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 > - **重要**：一旦提供图片输入（图生视频或首尾帧视频），`ratio` 参数将被忽略，视频比例将由输入图片的实际比例决定。`resolution` 参数仍然有效。
 
 **支持的视频模型**:
+- `jimeng-video-3.5-pro` - 专业版v3.5 **（默认）**
+- `jimeng-video-3.5` - 标准版v3.5
 - `jimeng-video-3.0-pro` - 专业版
 - `jimeng-video-3.0` - 标准版
 - `jimeng-video-3.0-fast` - 极速版（仅国内站支持）
@@ -494,33 +496,7 @@ curl -X POST http://localhost:5100/v1/videos/generations \
 
 **POST** `/v1/chat/completions`
 
-**功能说明**: 兼容OpenAI Chat Completions API格式的聊天接口,支持文生图和文生视频。根据模型类型自动判断是图像生成还是视频生成。
-
-**请求参数**:
-- `model` (string, 可选): 使用的模型名称,默认为 `"jimeng-4.0"`
-  - **图像模型**: `jimeng-4.0`, `jimeng-3.1`, `jimeng-3.0`, `jimeng-2.1`, `jimeng-xl-pro`, `nanobanana` (国际站)
-  - **视频模型**: `jimeng-video-3.0-pro`, `jimeng-video-3.0`, `jimeng-video-3.0-fast`, `jimeng-video-2.0-pro`, `jimeng-video-2.0`
-  - **自定义尺寸**: 支持 `model:width×height` 格式,例如 `jimeng-4.0:1920×1080`
-- `messages` (array, 必需): 消息数组,遵循OpenAI格式
-  - `role` (string): 角色,可选 `"user"` 或 `"assistant"`
-  - `content` (string): 消息内容,用作图像或视频的提示词
-- `stream` (boolean, 可选): 是否启用流式响应,默认为 `false`
-
-**图像生成专用参数**:
-- `ratio` (string, 可选): 图像比例,默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `3:2`, `2:3`, `21:9`
-- `resolution` (string, 可选): 分辨率级别,默认为 `"2k"`。支持的分辨率: `1k`, `2k`, `4k`
-- `sample_strength` (number, 可选): 采样强度 (0.0-1.0),默认为 `0.5`。值越高,生成结果越接近提示词
-- `negative_prompt` (string, 可选): 负面提示词,用于指定不希望出现的内容
-
-**视频生成专用参数**:
-- `ratio` (string, 可选): 视频比例,默认为 `"1:1"`。支持的比例: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `21:9`
-- `resolution` (string, 可选): 视频分辨率,默认为 `"720p"`。支持的分辨率: `720p`, `1080p`
-- `duration` (number, 可选): 视频时长(秒),默认为 `5`。支持的值: `5`, `10`
-
-**使用示例**:
-
 ```bash
-# 示例1: 图像生成 (默认模型)
 curl -X POST http://localhost:5100/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
@@ -532,70 +508,6 @@ curl -X POST http://localhost:5100/v1/chat/completions \
         "content": "画一幅山水画"
       }
     ]
-  }'
-
-# 示例2: 视频生成
-curl -X POST http://localhost:5100/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -d '{
-    "model": "jimeng-video-3.0",
-    "messages": [
-      {
-        "role": "user",
-        "content": "一只奔跑在草原上的狮子"
-      }
-    ],
-    "ratio": "16:9",
-    "resolution": "1080p",
-    "duration": 10
-  }'
-
-# 示例3: 自定义图像尺寸（传统方式）
-curl -X POST http://localhost:5100/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -d '{
-    "model": "jimeng-4.0:2048×2048",
-    "messages": [
-      {
-        "role": "user",
-        "content": "未来科技城市,霓虹灯,赛博朋克风格"
-      }
-    ]
-  }'
-
-# 示例4: 使用 ratio 和 resolution 参数（推荐）
-curl -X POST http://localhost:5100/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -d '{
-    "model": "jimeng-4.0",
-    "messages": [
-      {
-        "role": "user",
-        "content": "美丽的少女，胶片感"
-      }
-    ],
-    "ratio": "16:9",
-    "resolution": "4k",
-    "sample_strength": 0.7,
-    "negative_prompt": "低质量,模糊"
-  }'
-
-# 示例5: 流式响应 (适用于实时应用)
-curl -X POST http://localhost:5100/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -d '{
-    "model": "jimeng-4.0",
-    "messages": [
-      {
-        "role": "user",
-        "content": "一只可爱的小猫咪"
-      }
-    ],
-    "stream": true
   }'
 ```
 
@@ -611,6 +523,61 @@ curl -X POST http://localhost:5100/v1/chat/completions \
 - 仅使用 `messages` 数组中最后一条消息的内容作为提示词
 - 流式响应适合需要实时反馈的场景(如聊天界面)
 - 视频生成可能需要1-15分钟,建议启用流式响应以获取进度更新
+
+### Token API
+
+#### 检查Token状态
+
+**POST** `/token/check`
+
+检查token是否有效。
+
+**请求参数**:
+- `token` (string): 要检查的session token
+
+#### 获取积分信息
+
+**POST** `/token/points`
+
+获取一个或多个token的当前积分余额。
+
+**请求头**:
+- `Authorization`: Bearer token，多个token用逗号分隔
+
+#### 领取每日积分
+
+**POST** `/token/receive`
+
+手动触发每日积分领取（签到）。无论领取是否成功，都会返回最新的积分信息。
+
+**请求头**:
+- `Authorization`: Bearer token，多个token用逗号分隔
+
+**响应格式**:
+```json
+[
+  {
+    "token": "your_token",
+    "credits": {
+      "giftCredit": 10,
+      "purchaseCredit": 0,
+      "vipCredit": 0,
+      "totalCredit": 10
+    }
+  }
+]
+```
+
+**使用示例**:
+```bash
+# 单个token
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer YOUR_SESSION_ID"
+
+# 多个token批量签到
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer TOKEN1,TOKEN2,TOKEN3"
+```
 
 ## 🔍 API响应格式
 
