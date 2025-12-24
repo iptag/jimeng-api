@@ -252,7 +252,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 - `nanobananapro`: International sites only, supports `ratio` and `resolution`.
 - `nanobanana`: International sites only.
 - `jimeng-4.5`: Works on all sites, supports all 2k/4k ratios and intelligent_ratio. **(Default for all sites)**
-- `jimeng-4.1`: China site only, supports all 2k/4k ratios and intelligent_ratio.
+- `jimeng-4.1`: Works on all sites, supports all 2k/4k ratios and intelligent_ratio.
 - `jimeng-4.0`: Works on all sites.
 - `jimeng-3.1`: China site only.
 - `jimeng-3.0`: Works on all sites.
@@ -417,13 +417,13 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 > - **Important**: Once image input is provided (image-to-video or first-last frame video), the `ratio` parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio. The `resolution` parameter remains effective.
 
 **Supported Video Models**:
-- `jimeng-video-3.5-pro` - Professional Edition v3.5 **(Default)**
-- `jimeng-video-3.5` - Standard Edition v3.5
-- `jimeng-video-3.0-pro` - Professional Edition
-- `jimeng-video-3.0` - Standard Edition
+- `jimeng-video-3.5-pro` - Professional Edition v3.5, works on all sites **(Default)**
+- `jimeng-video-3.5` - Standard Edition v3.5, works on all sites
+- `jimeng-video-3.0-pro` - Professional Edition, works on all sites
+- `jimeng-video-3.0` - Standard Edition, works on all sites
 - `jimeng-video-3.0-fast` - Fast Edition (China site only)
-- `jimeng-video-2.0-pro` - Professional Edition v2
-- `jimeng-video-2.0` - Standard Edition v2
+- `jimeng-video-2.0-pro` - Professional Edition v2, works on all sites
+- `jimeng-video-2.0` - Standard Edition v2, works on all sites
 
 **Usage Examples**:
 

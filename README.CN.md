@@ -264,7 +264,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 - `nanobananapro`: 仅国际站支持，支持`ratio` 和`resolution`参数
 - `nanobanana`: 仅国际站支持
 - `jimeng-4.5`: 国内、国际站均支持，支持 2k/4k 全部 ratio 及 intelligent_ratio **（所有站点默认模型）**
-- `jimeng-4.1`: 仅国内站支持，支持 2k/4k 全部 ratio 及 intelligent_ratio
+- `jimeng-4.1`: 国内、国际站均支持，支持 2k/4k 全部 ratio 及 intelligent_ratio
 - `jimeng-4.0`: 国内、国际站均支持
 - `jimeng-3.1`: 仅国内站支持
 - `jimeng-3.0`: 国内、国际站均支持
@@ -436,13 +436,13 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 > - **重要**：一旦提供图片输入（图生视频或首尾帧视频），`ratio` 参数将被忽略，视频比例将由输入图片的实际比例决定。`resolution` 参数仍然有效。
 
 **支持的视频模型**:
-- `jimeng-video-3.5-pro` - 专业版v3.5 **（默认）**
-- `jimeng-video-3.5` - 标准版v3.5
-- `jimeng-video-3.0-pro` - 专业版
-- `jimeng-video-3.0` - 标准版
+- `jimeng-video-3.5-pro` - 专业版v3.5，国内/国际站均支持 **（默认）**
+- `jimeng-video-3.5` - 标准版v3.5，国内/国际站均支持
+- `jimeng-video-3.0-pro` - 专业版，国内/国际站均支持
+- `jimeng-video-3.0` - 标准版，国内/国际站均支持
 - `jimeng-video-3.0-fast` - 极速版（仅国内站支持）
-- `jimeng-video-2.0-pro` - 专业版v2
-- `jimeng-video-2.0` - 标准版v2
+- `jimeng-video-2.0-pro` - 专业版v2，国内/国际站均支持
+- `jimeng-video-2.0` - 标准版v2，国内/国际站均支持
 
 **使用示例**:
 

@@ -54,6 +54,7 @@ export const IMAGE_MODEL_MAP = {
 
 export const IMAGE_MODEL_MAP_US = {
   "jimeng-4.5": "high_aes_general_v40l",
+  "jimeng-4.1": "high_aes_general_v41",
   "jimeng-4.0": "high_aes_general_v40",
   "jimeng-3.0": "high_aes_general_v30l:general_v3.0_18b",
   "nanobanana": "external_model_gemini_flash_image_v25",
