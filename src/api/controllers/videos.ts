@@ -114,8 +114,8 @@ export async function generateVideo(
   const isVeo3 = model.includes("veo3");
   const isSora2 = model.includes("sora2");
   const is35Pro = model.includes("3.5_pro");
-  // 只有 video-3.0 和 video-3.0-fast 支持 resolution 参数
-  const supportsResolution = model.includes("vgfm_3.0") || model.includes("vgfm_3.0_fast");
+  // 只有 video-3.0 和 video-3.0-fast 支持 resolution 参数（3.0-pro 和 3.5-pro 不支持）
+  const supportsResolution = (model.includes("vgfm_3.0") || model.includes("vgfm_3.0_fast")) && !model.includes("_pro");
 
   // 将秒转换为毫秒
   // veo3 模型固定 8 秒
