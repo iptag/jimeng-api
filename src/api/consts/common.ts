@@ -61,13 +61,30 @@ export const IMAGE_MODEL_MAP_US = {
   "nanobananapro": "dreamina_image_lib_1",
 };
 
-// 视频模型映射
+// 视频模型映射 - 国内站 (CN)
 export const VIDEO_MODEL_MAP = {
   "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
-  "jimeng-video-3.5": "dreamina_ic_generate_video_model_vgfm_3.5",
   "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
   "jimeng-video-3.0-fast": "dreamina_ic_generate_video_model_vgfm_3.0_fast",
+  "jimeng-video-2.0": "dreamina_ic_generate_video_model_vgfm_lite",
+  "jimeng-video-2.0-pro": "dreamina_ic_generate_video_model_vgfm1.0"
+};
+
+// 视频模型映射 - 美国站 (US) - 仅保留 3.0 和 3.5-pro
+export const VIDEO_MODEL_MAP_US = {
+  "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
+  "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
+};
+
+// 视频模型映射 - 亚洲国际站 (HK/JP/SG)
+export const VIDEO_MODEL_MAP_ASIA = {
+  "jimeng-video-veo3": "dreamina_veo3_generate_video",
+  "jimeng-video-veo3.1": "dreamina_veo3.1_generate_video",
+  "jimeng-video-sora2": "dreamina_sora2_generate_video",
+  "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
+  "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
+  "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
   "jimeng-video-2.0": "dreamina_ic_generate_video_model_vgfm_lite",
   "jimeng-video-2.0-pro": "dreamina_ic_generate_video_model_vgfm1.0"
 };
