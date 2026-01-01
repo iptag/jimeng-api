@@ -227,6 +227,8 @@ Claude: [自动调用 skill,生成图片并保存到 /pic 目录]
 - `sample_strength` (number, 可选): 采样强度 (0.0-1.0)
 - `response_format` (string, 可选): 响应格式 ("url" 或 "b64_json")
 
+> **⏱️ 超时设置**: 图像生成最长等待 30 分钟。高峰期可能需要排队，请耐心等待。
+
 ```bash
 # 默认参数（ratio: "1:1", resolution: "2k"）
 curl -X POST http://localhost:5100/v1/images/generations \
@@ -709,9 +711,9 @@ export const RETRY_CONFIG = {
    - 检查Sessionid格式是否正确
 
 3. **生成超时**
-   - 图像生成：通常1-3分钟
-   - 视频生成：通常3-15分钟
-   - 系统会自动处理超时情况
+   - 图像生成：最长等待 15 分钟（高峰期可能需要排队）
+   - 视频生成：最长等待 20 分钟
+   - 系统会自动处理超时情况，超时后会返回错误信息
 
 4. **积分不足**
    - 前往即梦/dreamina官网查看积分余额

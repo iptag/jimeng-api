@@ -672,9 +672,9 @@ export const RETRY_CONFIG = {
     -   Check if the `sessionid` format is correct.
 
 3.  **Generation Timeout**
-    -   Image generation: usually 1-3 minutes.
-    -   Video generation: usually 3-15 minutes.
-    -   The system will automatically handle timeouts.
+    -   Image generation: up to 15 minutes max (may queue during peak hours).
+    -   Video generation: up to 20 minutes max.
+    -   The system will automatically handle timeouts and return an error message.
 
 4.  **Insufficient Credits**
     -   Go to the Jimeng/Dreamina official website to check your credit balance.

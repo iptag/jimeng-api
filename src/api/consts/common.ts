@@ -107,10 +107,10 @@ export const RETRY_CONFIG = {
 
 // 轮询配置
 export const POLLING_CONFIG = {
-  MAX_POLL_COUNT: 900, // 15分钟
-  POLL_INTERVAL: 5000, // 1秒
-  STABLE_ROUNDS: 5,    // 稳定轮次
-  TIMEOUT_SECONDS: 900 // 15分钟超时
+  MAX_POLL_COUNT: 900,   // 最大轮询次数
+  POLL_INTERVAL: 5000,   // 轮询间隔 5 秒
+  STABLE_ROUNDS: 5,      // 稳定轮次
+  TIMEOUT_SECONDS: 900   // 默认超时 15 分钟
 };
 
 // 支持的图片比例和分辨率
