@@ -147,3 +147,15 @@ export const RESOLUTION_OPTIONS = {
     "21:9": {width: 6048, height: 2592, ratio: 108}
   }
 };
+
+// nanobananapro 模型专用的 4k 分辨率配置（ratio 值与 1k/2k 一致）
+export const RESOLUTION_OPTIONS_NANOBANANAPRO_4K = {
+  "1:1": { width: 4096, height: 4096, ratio: 1 },
+  "4:3": { width: 4693, height: 3520, ratio: 4 },
+  "3:4": { width: 3520, height: 4693, ratio: 2 },
+  "16:9": { width: 5404, height: 3040, ratio: 3 },
+  "9:16": { width: 3040, height: 5404, ratio: 5 },
+  "3:2": { width: 4992, height: 3328, ratio: 7 },
+  "2:3": { width: 3328, height: 4992, ratio: 6 },
+  "21:9": { width: 6197, height: 2656, ratio: 8 }
+};

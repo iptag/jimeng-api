@@ -1,5 +1,5 @@
 import util from "@/lib/util.ts";
-import { DRAFT_MIN_VERSION, DRAFT_VERSION, RESOLUTION_OPTIONS } from "@/api/consts/common.ts";
+import { DRAFT_MIN_VERSION, DRAFT_VERSION, RESOLUTION_OPTIONS, RESOLUTION_OPTIONS_NANOBANANAPRO_4K } from "@/api/consts/common.ts";
 import { RegionInfo, getAssistantId } from "@/api/controllers/core.ts";
 
 export type RegionKey = "CN" | "US" | "HK" | "JP" | "SG";
@@ -20,7 +20,22 @@ function getRegionKey(regionInfo: RegionInfo): RegionKey {
   return "CN";
 }
 
-function lookupResolution(resolution: string = "2k", ratio: string = "1:1") {
+function lookupResolution(resolution: string = "2k", ratio: string = "1:1", userModel?: string) {
+  // nanobananapro 模型使用 4k 时，使用专用配置
+  if (userModel === "nanobananapro" && resolution === "4k") {
+    const ratioConfig = RESOLUTION_OPTIONS_NANOBANANAPRO_4K[ratio];
+    if (!ratioConfig) {
+      const supportedRatios = Object.keys(RESOLUTION_OPTIONS_NANOBANANAPRO_4K).join(", ");
+      throw new Error(`nanobananapro 模型在 4k 分辨率下，不支持的比例 "${ratio}"。支持的比例: ${supportedRatios}`);
+    }
+    return {
+      width: ratioConfig.width,
+      height: ratioConfig.height,
+      imageRatio: ratioConfig.ratio,
+      resolutionType: resolution,
+    };
+  }
+
   const resolutionGroup = RESOLUTION_OPTIONS[resolution];
   if (!resolutionGroup) {
     const supportedResolutions = Object.keys(RESOLUTION_OPTIONS).join(", ");
@@ -76,7 +91,7 @@ export function resolveResolution(
       };
     } else if (regionKey === "HK" || regionKey === "JP" || regionKey === "SG") {
       // HK/JP/SG 站: 强制 1k 分辨率，但 ratio 可自定义
-      const params = lookupResolution("1k", ratio);
+      const params = lookupResolution("1k", ratio, userModel);
       return {
         width: params.width,
         height: params.height,
@@ -88,7 +103,7 @@ export function resolveResolution(
   }
 
   // 其他所有情况: 使用用户指定的 resolution 和 ratio
-  const params = lookupResolution(resolution, ratio);
+  const params = lookupResolution(resolution, ratio, userModel);
   return {
     ...params,
     isForced: false,
