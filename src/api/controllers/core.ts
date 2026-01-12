@@ -548,19 +548,19 @@ export function tokenSplit(authorization: string) {
  * 获取Token存活状态
  */
 export async function getTokenLiveStatus(refreshToken: string) {
-  const result = await request(
-    "POST",
-    "/passport/account/info/v2",
-    refreshToken,
-    {
-      params: {
-        account_sdk_source: "web",
-      },
-    }
-  );
   try {
-    const { user_id } = checkResult(result);
-    return !!user_id;
+    const result = await request(
+      "POST",
+      "/passport/account/info/v2",
+      refreshToken,
+      {
+        params: {
+          account_sdk_source: "web",
+        },
+      }
+    );
+    // request 内部已调用 checkResult，直接使用返回值
+    return !!result?.user_id;
   } catch (err) {
     return false;
   }

@@ -227,6 +227,8 @@ Claude: [自动调用 skill,生成图片并保存到 /pic 目录]
 - `sample_strength` (number, 可选): 采样强度 (0.0-1.0)
 - `response_format` (string, 可选): 响应格式 ("url" 或 "b64_json")
 
+> **⏱️ 超时设置**: 图像生成最长等待 30 分钟。高峰期可能需要排队，请耐心等待。
+
 ```bash
 # 默认参数（ratio: "1:1", resolution: "2k"）
 curl -X POST http://localhost:5100/v1/images/generations \
@@ -264,7 +266,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 - `nanobananapro`: 仅国际站支持，支持`ratio` 和`resolution`参数
 - `nanobanana`: 仅国际站支持
 - `jimeng-4.5`: 国内、国际站均支持，支持 2k/4k 全部 ratio 及 intelligent_ratio **（所有站点默认模型）**
-- `jimeng-4.1`: 仅国内站支持，支持 2k/4k 全部 ratio 及 intelligent_ratio
+- `jimeng-4.1`: 国内、国际站均支持，支持 2k/4k 全部 ratio 及 intelligent_ratio
 - `jimeng-4.0`: 国内、国际站均支持
 - `jimeng-3.1`: 仅国内站支持
 - `jimeng-3.0`: 国内、国际站均支持
@@ -423,8 +425,12 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 - `model` (string): 使用的视频模型名称。
 - `prompt` (string): 视频内容的文本描述。
 - `ratio` (string, 可选): 视频比例，默认为 `"1:1"`。支持的比例：`1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `21:9`。**注意**：在图生视频模式下（有图片输入时），此参数将被忽略，视频比例由输入图片的实际比例决定。
-- `resolution` (string, 可选): 视频分辨率，默认为 `"720p"`。支持的分辨率：`720p`, `1080p`。
-- `duration` (number, 可选): 视频时长（秒），默认为 `5`。支持的值：`5`（5秒），`10`（10秒）。
+- `resolution` (string, 可选): 视频分辨率，默认为 `"720p"`。支持的分辨率：`720p`, `1080p`。**注意**：仅 `jimeng-video-3.0` 和 `jimeng-video-3.0-fast` 支持此参数，其他模型会忽略。
+- `duration` (number, 可选): 视频时长（秒）。不同模型支持的值：
+  - `jimeng-video-veo3` / `jimeng-video-veo3.1`: `8`（固定）
+  - `jimeng-video-sora2`: `4`（默认）、`8`、`12`
+  - `jimeng-video-3.5-pro`: `5`（默认）、`10`、`12`
+  - 其他模型: `5`（默认）、`10`
 - `file_paths` (array, 可选): 一个包含图片URL的数组，用于指定视频的**首帧**（数组第1个元素）和**尾帧**（数组第2个元素）。
 - `[file]` (file, 可选): 通过 `multipart/form-data` 方式上传的本地图片文件（最多2个），用于指定视频的**首帧**和**尾帧**。字段名可以任意，例如 `image1`。
 - `response_format` (string, 可选): 响应格式，支持 `url` (默认) 或 `b64_json`。
@@ -436,13 +442,17 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 > - **重要**：一旦提供图片输入（图生视频或首尾帧视频），`ratio` 参数将被忽略，视频比例将由输入图片的实际比例决定。`resolution` 参数仍然有效。
 
 **支持的视频模型**:
-- `jimeng-video-3.5-pro` - 专业版v3.5 **（默认）**
-- `jimeng-video-3.5` - 标准版v3.5
-- `jimeng-video-3.0-pro` - 专业版
-- `jimeng-video-3.0` - 标准版
+- `jimeng-video-3.5-pro` - 专业版v3.5，国内/国际站均支持 **（默认）**
+- `jimeng-video-veo3` - Veo3模型，仅亚洲国际站 (HK/JP/SG) 支持，固定8秒时长
+- `jimeng-video-veo3.1` - Veo3.1模型，仅亚洲国际站 (HK/JP/SG) 支持，固定8秒时长
+- `jimeng-video-sora2` - Sora2模型，仅亚洲国际站 (HK/JP/SG) 支持
+- `jimeng-video-3.0-pro` - 专业版，国内站和亚洲国际站 (HK/JP/SG) 支持
+- `jimeng-video-3.0` - 标准版，国内/国际站均支持
 - `jimeng-video-3.0-fast` - 极速版（仅国内站支持）
-- `jimeng-video-2.0-pro` - 专业版v2
-- `jimeng-video-2.0` - 标准版v2
+- `jimeng-video-2.0-pro` - 专业版v2，国内站和亚洲国际站 (HK/JP/SG) 支持
+- `jimeng-video-2.0` - 标准版v2，国内站和亚洲国际站 (HK/JP/SG) 支持
+
+> **注意**: 美国站仅支持 `jimeng-video-3.5-pro` 和 `jimeng-video-3.0` 模型。
 
 **使用示例**:
 
@@ -714,9 +724,9 @@ export const RETRY_CONFIG = {
    - 检查Sessionid格式是否正确
 
 3. **生成超时**
-   - 图像生成：通常1-3分钟
-   - 视频生成：通常3-15分钟
-   - 系统会自动处理超时情况
+   - 图像生成：最长等待 15 分钟（高峰期可能需要排队）
+   - 视频生成：最长等待 20 分钟
+   - 系统会自动处理超时情况，超时后会返回错误信息
 
 4. **积分不足**
    - 前往即梦/dreamina官网查看积分余额

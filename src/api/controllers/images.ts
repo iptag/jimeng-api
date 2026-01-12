@@ -150,6 +150,7 @@ export async function generateImageComposition(
     userModel,
     model,
     prompt,
+    negativePrompt,
     imageCount,
     sampleStrength,
     resolution: resolutionResult,
@@ -221,7 +222,8 @@ export async function generateImageComposition(
   const poller = new SmartPoller({
     maxPollCount: 900,
     expectedItemCount: 1,
-    type: 'image'
+    type: 'image',
+    timeoutSeconds: 900 // 15 分钟超时
   });
 
   const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {
@@ -406,7 +408,7 @@ async function generateImagesInternal(
     { data: requestData }
   );
 
-  const historyId = aigc_data.history_record_id;
+  const historyId = aigc_data?.history_record_id;
   if (!historyId)
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "记录ID不存在");
 
@@ -414,7 +416,8 @@ async function generateImagesInternal(
   const poller = new SmartPoller({
     maxPollCount: 900,
     expectedItemCount: 4,
-    type: 'image'
+    type: 'image',
+    timeoutSeconds: 900 // 15 分钟超时
   });
 
   const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {
@@ -564,7 +567,8 @@ async function generateJimeng4xMultiImages(
   const poller = new SmartPoller({
     maxPollCount: 600,
     expectedItemCount: targetImageCount,
-    type: 'image'
+    type: 'image',
+    timeoutSeconds: 900 // 15 分钟超时
   });
 
   const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {

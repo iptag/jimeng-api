@@ -353,7 +353,7 @@ def main():
             type=str,
             default="jimeng-4.5",
             choices=["jimeng-4.5", "jimeng-4.1", "jimeng-4.0", "jimeng-3.1", "jimeng-3.0", "jimeng-2.1", "jimeng-xl-pro", "nanobanana"],
-            help="Model to use (default: jimeng-4.5; jimeng-4.1is domestic only and supports intelligent ratio)"
+            help="Model to use (default: jimeng-4.5)"
         )
         subparser.add_argument(
             "--ratio",

@@ -252,7 +252,7 @@ curl -X POST http://localhost:5100/v1/images/generations \
 - `nanobananapro`: International sites only, supports `ratio` and `resolution`.
 - `nanobanana`: International sites only.
 - `jimeng-4.5`: Works on all sites, supports all 2k/4k ratios and intelligent_ratio. **(Default for all sites)**
-- `jimeng-4.1`: China site only, supports all 2k/4k ratios and intelligent_ratio.
+- `jimeng-4.1`: Works on all sites, supports all 2k/4k ratios and intelligent_ratio.
 - `jimeng-4.0`: Works on all sites.
 - `jimeng-3.1`: China site only.
 - `jimeng-3.0`: Works on all sites.
@@ -404,8 +404,12 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 - `model` (string): The name of the video model to use.
 - `prompt` (string): The text description of the video content.
 - `ratio` (string, optional): Video aspect ratio, defaults to `"1:1"`. Supported ratios: `1:1`, `4:3`, `3:4`, `16:9`, `9:16`, `21:9`. **Note**: In image-to-video mode (when images are provided), this parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio.
-- `resolution` (string, optional): Video resolution, defaults to `"720p"`. Supported resolutions: `720p`, `1080p`.
-- `duration` (number, optional): Video duration in seconds, defaults to `5`. Supported values: `5` (5 seconds), `10` (10 seconds).
+- `resolution` (string, optional): Video resolution, defaults to `"720p"`. Supported resolutions: `720p`, `1080p`. **Note**: Only `jimeng-video-3.0` and `jimeng-video-3.0-fast` support this parameter; other models ignore it.
+- `duration` (number, optional): Video duration in seconds. Supported values vary by model:
+  - `jimeng-video-veo3` / `jimeng-video-veo3.1`: `8` (fixed)
+  - `jimeng-video-sora2`: `4` (default), `8`, `12`
+  - `jimeng-video-3.5-pro`: `5` (default), `10`, `12`
+  - Other models: `5` (default), `10`
 - `file_paths` (array, optional): An array of image URLs to specify the **start frame** (1st element) and **end frame** (2nd element) of the video.
 - `[file]` (file, optional): Local image files uploaded via `multipart/form-data` (up to 2) to specify the **start frame** and **end frame**. The field name can be arbitrary, e.g., `image1`.
 - `response_format` (string, optional): Response format, supports `url` (default) or `b64_json`.
@@ -417,13 +421,17 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 > - **Important**: Once image input is provided (image-to-video or first-last frame video), the `ratio` parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio. The `resolution` parameter remains effective.
 
 **Supported Video Models**:
-- `jimeng-video-3.5-pro` - Professional Edition v3.5 **(Default)**
-- `jimeng-video-3.5` - Standard Edition v3.5
-- `jimeng-video-3.0-pro` - Professional Edition
-- `jimeng-video-3.0` - Standard Edition
+- `jimeng-video-3.5-pro` - Professional Edition v3.5, works on all sites **(Default)**
+- `jimeng-video-veo3` - Veo3 model, Asia international sites only (HK/JP/SG), fixed 8s duration
+- `jimeng-video-veo3.1` - Veo3.1 model, Asia international sites only (HK/JP/SG), fixed 8s duration
+- `jimeng-video-sora2` - Sora2 model, Asia international sites only (HK/JP/SG)
+- `jimeng-video-3.0-pro` - Professional Edition, China and Asia international sites (HK/JP/SG)
+- `jimeng-video-3.0` - Standard Edition, works on all sites
 - `jimeng-video-3.0-fast` - Fast Edition (China site only)
-- `jimeng-video-2.0-pro` - Professional Edition v2
-- `jimeng-video-2.0` - Standard Edition v2
+- `jimeng-video-2.0-pro` - Professional Edition v2, China and Asia international sites (HK/JP/SG)
+- `jimeng-video-2.0` - Standard Edition v2, China and Asia international sites (HK/JP/SG)
+
+> **Note**: US site only supports `jimeng-video-3.5-pro` and `jimeng-video-3.0` models.
 
 **Usage Examples**:
 
@@ -664,9 +672,9 @@ export const RETRY_CONFIG = {
     -   Check if the `sessionid` format is correct.
 
 3.  **Generation Timeout**
-    -   Image generation: usually 1-3 minutes.
-    -   Video generation: usually 3-15 minutes.
-    -   The system will automatically handle timeouts.
+    -   Image generation: up to 15 minutes max (may queue during peak hours).
+    -   Video generation: up to 20 minutes max.
+    -   The system will automatically handle timeouts and return an error message.
 
 4.  **Insufficient Credits**
     -   Go to the Jimeng/Dreamina official website to check your credit balance.

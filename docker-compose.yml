@@ -4,6 +4,7 @@ services:
     image: ghcr.io/iptag/jimeng-api:latest
     container_name: jimeng-api
     # 本地开发时可以取消注释下面的 build 配置
+    # image: jimeng-api:latest
     # build:
     #   context: .
     #   dockerfile: Dockerfile
