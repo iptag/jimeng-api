@@ -448,7 +448,7 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 - `jimeng-video-sora2` - Sora2模型，仅亚洲国际站 (HK/JP/SG) 支持
 - `jimeng-video-3.0-pro` - 专业版，国内站和亚洲国际站 (HK/JP/SG) 支持
 - `jimeng-video-3.0` - 标准版，国内/国际站均支持
-- `jimeng-video-3.0-fast` - 极速版（仅国内站支持）
+- `jimeng-video-3.0-fast` - 极速版，国内站和亚洲国际站 (HK/JP/SG) 支持
 - `jimeng-video-2.0-pro` - 专业版v2，国内站和亚洲国际站 (HK/JP/SG) 支持
 - `jimeng-video-2.0` - 标准版v2，国内站和亚洲国际站 (HK/JP/SG) 支持
 

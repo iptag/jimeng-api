@@ -1,8 +1,10 @@
 import _ from "lodash";
 import fs from "fs-extra";
 import { Buffer } from "buffer";
+import axios from "axios";
 
 import APIException from "@/lib/exceptions/APIException.ts";
+
 import EX from "@/api/consts/exceptions.ts";
 import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request, parseRegionFromToken, getAssistantId, RegionInfo } from "./core.ts";
@@ -65,11 +67,13 @@ async function uploadImageFromFile(file: any, refreshToken: string, regionInfo: 
 async function uploadImageFromUrl(imageUrl: string, refreshToken: string, regionInfo: RegionInfo): Promise<string> {
   try {
     logger.info(`开始从URL下载并上传视频图片: ${imageUrl}`);
-    const imageResponse = await fetch(imageUrl);
-    if (!imageResponse.ok) {
+    const imageResponse = await axios.get(imageUrl, {
+      responseType: 'arraybuffer',
+    });
+    if (imageResponse.status < 200 || imageResponse.status >= 300) {
       throw new Error(`下载图片失败: ${imageResponse.status}`);
     }
-    const imageBuffer = await imageResponse.arrayBuffer();
+    const imageBuffer = imageResponse.data;
     return await uploadImageBuffer(imageBuffer, refreshToken, regionInfo);
   } catch (error: any) {
     logger.error(`从URL上传视频图片失败: ${error.message}`);
