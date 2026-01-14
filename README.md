@@ -427,7 +427,7 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 - `jimeng-video-sora2` - Sora2 model, Asia international sites only (HK/JP/SG)
 - `jimeng-video-3.0-pro` - Professional Edition, China and Asia international sites (HK/JP/SG)
 - `jimeng-video-3.0` - Standard Edition, works on all sites
-- `jimeng-video-3.0-fast` - Fast Edition (China site only)
+- `jimeng-video-3.0-fast` - Fast Edition, China and Asia international sites (HK/JP/SG)
 - `jimeng-video-2.0-pro` - Professional Edition v2, China and Asia international sites (HK/JP/SG)
 - `jimeng-video-2.0` - Standard Edition v2, China and Asia international sites (HK/JP/SG)
 
