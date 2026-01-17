@@ -1,0 +1,31 @@
+[2026-01-16 17:51:01.508][info][server.ts<192,32>] -> POST /v1/images/generations
+[2026-01-16 17:51:01.509][info][images.ts<301,10>] 使用模型: jimeng-4.5 映射模型: high_aes_general_v40l 分辨率: 2k 比例: 1:1 精细度: 0.5 智能比例: true
+[2026-01-16 17:51:01.511][info][core.ts<294,10>] 发送请求: POST https://commerce-api-sg.capcut.com/commerce/v1/benefits/user_credit
+[2026-01-16 17:51:01.513][info][core.ts<295,10>] 请求参数: {}
+[2026-01-16 17:51:01.514][info][core.ts<296,10>] 请求数据: {}
+[2026-01-16 17:51:03.193][info][core.ts<322,14>] 响应状态: 200 OK
+[2026-01-16 17:51:03.194][info][core.ts<331,14>] 响应数据摘要: {"ret":"0","errmsg":"success","systime":"1768557063951","log_id":"2026011617510318BB72541A233FA97656","response":"{\"credit\":{\"vip_credit\":0,\"gift_credit\":0,\"purchase_credit\":0},\"credits_detail\":{}}","sign":"Hst5YuKnob7OwqMDTgHLvDaVzPH+YpOH+KvINvHMOJBrIThab7HYKjGSfXaBm4mAFEqFE/9x/m33Ul5fWhdFmwZCZwlrhmvbcjjgXiQ3FRVjUu0S/KXgLQu1o+YcmhzZ494AMUCOJ8y0DG4Kzxf5N0+ZbAW/dvd+nH423tpr08U=","data":{"credit":{"vip_credit":0,"gift_credit":0,"purchase_credit":0},"credits_detail":{}}}
+[2026-01-16 17:51:03.197][info][core.ts<179,10>]
+积分信息:
+赠送积分: 0, 购买积分: 0, VIP积分: 0
+[2026-01-16 17:51:03.199][info][images.ts<337,12>] 积分为 0，尝试收取今日积分...
+[2026-01-16 17:51:03.200][info][core.ts<194,10>] 正在尝试收取今日积分...
+[2026-01-16 17:51:03.200][info][core.ts<294,10>] 发送请求: POST https://commerce-api-sg.capcut.com/commerce/v1/benefits/credit_receive
+[2026-01-16 17:51:03.200][info][core.ts<295,10>] 请求参数: {"aid":513641,"device_platform":"web","region":"HK","da_version":"3.3.2","web_component_open_flag":1,"web_version":"7.5.0","aigc_features":"app_lip_sync"}
+[2026-01-16 17:51:03.201][info][core.ts<296,10>] 请求数据: {"time_zone":"Asia/Shanghai"}
+[2026-01-16 17:51:03.757][info][core.ts<322,14>] 响应状态: 200 OK
+[2026-01-16 17:51:03.758][info][core.ts<331,14>] 响应数据摘要: {"ret":"0","errmsg":"success","systime":"1768557064528","log_id":"202601161751043A4FE747045903AD6984","response":"{\"is_first_receive\":false,\"receive_quota\":50,\"has_popup\":false,\"receive_inter_days\":1}","sign":"Mf23slTu5rbB30hHXgtSCvhib/xQfpT745pwEz8nxcFVlrc9R+h6l8gvarvOO9G1yIPNoxhE8HRxrWkVTyhKoin3X6iV0tbHyuONCpiTc24+po9H+1JsYxsu3ML8aFNbc37iaihjAz0FTqaQRpS79oGgyv48zxTrh8BeRjoHnCY=","data":{"is_first_receive":false,"receive_quota":50,"has_popup":false,"receive_inter_days":1}}
+[2026-01-16 17:51:03.761][info][core.ts<205,10>] 今日50积分收取成功
+[2026-01-16 17:51:03.764][info][core.ts<294,10>] 发送请求: POST https://commerce-api-sg.capcut.com/commerce/v1/benefits/user_credit
+[2026-01-16 17:51:03.765][info][core.ts<295,10>] 请求参数: {}
+[2026-01-16 17:51:03.766][info][core.ts<296,10>] 请求数据: {}
+[2026-01-16 17:51:05.527][info][core.ts<322,14>] 响应状态: 200 OK
+[2026-01-16 17:51:05.528][info][core.ts<331,14>] 响应数据摘要: {"ret":"0","errmsg":"success","systime":"1768557064965","log_id":"2026011617510499864F6CA89CC8B0533D","response":"{\"credit\":{\"vip_credit\":0,\"gift_credit\":0,\"purchase_credit\":0},\"expiring_credits\":[{\"credit_amount\":50,\"expire_time\":1768579199}],\"credits_detail\":{\"gift_credits\":[{\"residual_credits\":50,\"credits_life_end\":1768579199}]}}","sign":"LcfU5VHsSxCmMtlj3KMF1EjXR63ourg5aVsit5gJzs/a6QcfJI4nQ3KiWIvNnrAYkD6o3/xEb4/e7GY4tPbT309kNyIZDX9fDZqGRRub6lveIE9R2YgHQEUOXXzT4uO3K47vO3...
+[2026-01-16 17:51:05.530][info][core.ts<179,10>]
+积分信息:
+赠送积分: 0, 购买积分: 0, VIP积分: 0
+[2026-01-16 17:51:05.534][info][images.ts<342,14>] 收取后积分状态: 总计=0, 赠送=0, 购买=0, VIP=0
+[2026-01-16 17:51:05.536][info][core.ts<294,10>] 发送请求: POST https://mweb-api-sg.capcut.com/mweb/v1/aigc_draft/generate
+[2026-01-16 17:51:05.536][info][core.ts<295,10>] 请求参数: {"aid":513641,"device_platform":"web","region":"HK","da_version":"3.3.2","web_component_open_flag":1,"web_version":"7.5.0","aigc_features":"app_lip_sync"}
+[2026-01-16 17:51:05.537][info][core.ts<296,10>] 请求数据: {"extend":{"root_model":"high_aes_general_v40l"},"submit_id":"e0112cf1-f2c0-11f0-ba36-e1747d48660c","metrics_extra":"{\"promptSource\":\"custom\",\"generateCount\":1,\"enterFrom\":\"click\",\"sceneOptions\":\"[{\\\"type\\\":\\\"image\\\",\\\"scene\\\":\\\"ImageBasicGenerate\\\",\\\"modelReqKey\\\":\\\"jimeng-4.5\\\",\\\"resolutionType\\\":\\\"2k\\\",\\\"abilityList\\\":[],\\\"reportParams\\\":{\\\"enterSource\\\":\\\"generate\\\",\\\"vipSource\\\":\\\"generate\\\",\\\"extraVipFunctionKey\\\":\\\"jimeng-4.5-2k\\\",\\\"useVipFunctionDetailsReporterHoc\\\":true},\\\"benefitCount\\\":4}]\",\"generateId\":\"e0112cf1-f2c0-11f0-ba36-e1747d48660c\",\"isRegenerate\":false}","draft_content":"{\"type\":\"draft\",\"id\":\"e0115401-f2c0-11f0-ba36-e1747d48660c\",\"min_version\":\"3.0.2\",\"min_features\":[],\"is_from_tsn\":true,\"version\":\"3.3.7\",\"main_component_id\":\"e0112cf0-f2c0-11f0-ba36-e1747d48660c\",\"component_list\":[{\"type\":\"image_base_component\",\"id\":\"e0112cf0-f2c0-11f0-ba36-e1747d48660c\",\"min_version\":\"3.0.2\",\"aigc_mode\":\"workbench\",\"metadata\":{\"type\":\"\",\"id\":\"e0115402-f2c0-11f0-ba36-e1747d48660c\",\"created_platform\":3,\"created_platform_version\":\"\",\"created_time_in_ms\":\"1768557065536\",\"created_did\":\"\"},\"generate_type\":\"generate\",\"abilities\":{\"type\":\"\",\"id\":\"e0112cf4-f2c0-11f0-ba36-e1747d48660c\",\"generate\":{\"type\":\"\",\"id\":\"e0112cf5-f2c0-11f0-ba36-e1747d48660c\",\"core_param\":{\"type\":\"\",\"id\":\"e0112cf2-f2c0-11f0-ba36-e1747d48660c\",\"model\":\"high_aes_general_v40l\",\"prompt\":\"可爱的小花猫，横屏\",\"sample_strength\":0.5,\"large_image_info\":{\"type\":\"\",\"id\":\"e0112cf3-f2c0-11f0-ba36-e1747d48660c\",\"min_version\":\"3.0.2\",\"height\":2048,\"width\":2048,\"resolution_type\":\"2k\"},\"intelligent_ratio\":true,\"negative_prompt\":\"\",\"seed\":2547086567},\"gen_option\":{\"type\":\"\",\"id\":\"e0115400-f2c0-11f0-ba36-e1747d48660c\",\"generate_all\":false}}}}]}","http_common_info":{"aid":513641}}
+[2026-01-16 17:51:07.570][info][core.ts<322,14>] 响应状态: 200 OK

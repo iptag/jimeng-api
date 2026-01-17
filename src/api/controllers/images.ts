@@ -103,8 +103,14 @@ export async function generateImageComposition(
   // 获取积分
   try {
     const { totalCredit } = await getCredit(refreshToken);
-    if (totalCredit <= 0)
-      await receiveCredit(refreshToken);
+    if (totalCredit <= 0) {
+      logger.info("积分为 0，尝试收取今日积分...");
+      try {
+        await receiveCredit(refreshToken);
+      } catch (receiveError) {
+        logger.warn(`收取积分失败: ${receiveError.message}. 这可能是因为: 1) 今日已收取过积分, 2) 账户受到风控限制, 3) 需要在官网手动收取首次积分`);
+      }
+    }
   } catch (e) {
     logger.warn(`获取积分失败，可能是不支持的区域或token已失效: ${e.message}`);
   }
@@ -327,10 +333,19 @@ async function generateImagesInternal(
 
   // 获取积分
   const { totalCredit, giftCredit, purchaseCredit, vipCredit } = await getCredit(refreshToken);
-  if (totalCredit <= 0)
-    await receiveCredit(refreshToken);
-
-  logger.info(`当前积分状态: 总计=${totalCredit}, 赠送=${giftCredit}, 购买=${purchaseCredit}, VIP=${vipCredit}`);
+  if (totalCredit <= 0) {
+    logger.info("积分为 0，尝试收取今日积分...");
+    try {
+      await receiveCredit(refreshToken);
+      logger.info("积分收取成功，继续生成图片");
+    } catch (receiveError) {
+      logger.warn(`收取积分失败: ${receiveError.message}. 这可能是因为: 1) 今日已收取过积分, 2) 账户受到风控限制, 3) 需要在官网手动收取首次积分`);
+      throw new APIException(EX.API_IMAGE_GENERATION_INSUFFICIENT_POINTS,
+        `积分不足且无法自动收取。请访问即梦官网手动收取首次积分，或检查账户状态。`);
+    }
+  } else {
+    logger.info(`当前积分状态: 总计=${totalCredit}, 赠送=${giftCredit}, 购买=${purchaseCredit}, VIP=${vipCredit}`);
+  }
 
   // 检查是否为多图生成模式 (jimeng-4.0/jimeng-4.1/jimeng-4.5 支持)
   const isJimeng4xMultiImage = ['jimeng-4.0', 'jimeng-4.1', 'jimeng-4.5'].includes(userModel) && (

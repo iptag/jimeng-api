@@ -186,15 +186,15 @@ export async function getCredit(refreshToken: string) {
 }
 
 /**
- * 接收今日积分
+ * 接收今日积分（仅在积分为 0 时调用）
  *
  * @param refreshToken 用于刷新access_token的refresh_token
  */
 export async function receiveCredit(refreshToken: string) {
-  logger.info("正在收取今日积分...")
+  logger.info("正在尝试收取今日积分...")
   const referer = getRefererByRegion(refreshToken, "/ai-tool/home");
 
-  const { cur_total_credits, receive_quota  } = await request("POST", "/commerce/v1/benefits/credit_receive", refreshToken, {
+  const { receive_quota } = await request("POST", "/commerce/v1/benefits/credit_receive", refreshToken, {
     data: {
       time_zone: "Asia/Shanghai"
     },
@@ -202,8 +202,8 @@ export async function receiveCredit(refreshToken: string) {
       Referer: referer
     }
   });
-  logger.info(`\n今日${receive_quota}积分收取成功\n剩余积分: ${cur_total_credits}`);
-  return cur_total_credits;
+  logger.info(`今日${receive_quota}积分收取成功`);
+  return receive_quota;
 }
 
 /**

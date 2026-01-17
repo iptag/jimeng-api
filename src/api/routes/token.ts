@@ -39,14 +39,29 @@ export default {
             // refresh_token切分
             const tokens = tokenSplit(request.headers.authorization);
             const credits = await Promise.all(tokens.map(async (token) => {
-                try {
-                    await receiveCredit(token)
-                } catch (err) {
-                    logger.warn('收取积分失败，继续查询积分:', err)
+                const currentCredit = await getCredit(token);
+                if (currentCredit.totalCredit <= 0) {
+                    try {
+                        const receivedQuota = await receiveCredit(token);
+                        return {
+                            token,
+                            received: true,
+                            receivedQuota
+                        }
+                    } catch (err) {
+                        logger.warn('收取积分失败:', err);
+                        return {
+                            token,
+                            credits: currentCredit,
+                            received: false,
+                            error: err.message
+                        }
+                    }
                 }
                 return {
                     token,
-                    credits: await getCredit(token)
+                    credits: currentCredit,
+                    received: false
                 }
             }))
             return credits;
