@@ -8,10 +8,10 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 # 复制package文件以优化Docker层缓存
-COPY package.json yarn.lock ./
+COPY package.json package-lock.json ./
 
 # 安装所有依赖（包括devDependencies）
-RUN yarn install --frozen-lockfile --registry https://registry.npmmirror.com/ --ignore-engines
+RUN npm ci --registry https://registry.npmmirror.com/
 
 # 复制源代码
 COPY . .
@@ -25,7 +25,7 @@ RUN if [ -n "$VERSION" ]; then \
     fi
 
 # 构建应用
-RUN yarn build
+RUN npm run build
 
 # 生产阶段
 FROM node:18-alpine AS production
@@ -40,13 +40,13 @@ RUN addgroup -g 1001 -S nodejs && \
 # 设置工作目录
 WORKDIR /app
 
-# 复制 package.json（使用构建阶段已更新版本）与 yarn.lock
+# 复制 package.json（使用构建阶段已更新版本）与 package-lock.json
 COPY --from=builder /app/package.json ./package.json
-COPY yarn.lock ./
+COPY --from=builder /app/package-lock.json ./package-lock.json
 
 # 只安装生产依赖
-RUN yarn install --frozen-lockfile --production --registry https://registry.npmmirror.com/ --ignore-engines && \
-    yarn cache clean
+RUN npm ci --omit=dev --registry https://registry.npmmirror.com/ && \
+    npm cache clean --force
 
 # 从构建阶段复制构建产物
 COPY --from=builder --chown=jimeng:nodejs /app/dist ./dist
@@ -70,4 +70,4 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=3 \
     CMD wget -q --spider http://localhost:5100/ping
 
 # 启动应用
-CMD ["yarn", "start"]
+CMD ["npm", "start"]
