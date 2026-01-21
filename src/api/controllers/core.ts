@@ -2,6 +2,8 @@ import path from "path";
 import _ from "lodash";
 import mime from "mime";
 import axios, { AxiosRequestConfig, AxiosResponse } from "axios";
+import { HttpsProxyAgent } from "https-proxy-agent";
+import { SocksProxyAgent } from "socks-proxy-agent";
 
 import APIException from "@/lib/exceptions/APIException.ts";
 import EX from "@/api/consts/exceptions.ts";
@@ -85,8 +87,30 @@ export interface RegionInfo {
   isCN: boolean;
 }
 
+export interface TokenWithProxy {
+  token: string;
+  proxyUrl: string | null;
+}
+
+export function parseProxyFromToken(rawToken: string): TokenWithProxy {
+  const tokenValue = rawToken.trim();
+  const proxyPattern = /^(https?|socks(?:4|5)?):\/\//i;
+  if (!proxyPattern.test(tokenValue)) return { token: tokenValue, proxyUrl: null };
+
+  const lastAtIndex = tokenValue.lastIndexOf("@");
+  if (lastAtIndex <= 0 || lastAtIndex === tokenValue.length - 1)
+    return { token: tokenValue, proxyUrl: null };
+
+  const proxyUrl = tokenValue.slice(0, lastAtIndex);
+  const token = tokenValue.slice(lastAtIndex + 1);
+  if (!proxyUrl || !token) return { token: tokenValue, proxyUrl: null };
+
+  return { token, proxyUrl };
+}
+
 export function parseRegionFromToken(refreshToken: string): RegionInfo {
-  const token = refreshToken.toLowerCase();
+  const { token: parsedToken } = parseProxyFromToken(refreshToken);
+  const token = parsedToken.toLowerCase();
   const isUS = token.startsWith('us-');
   const isHK = token.startsWith('hk-');
   const isJP = token.startsWith('jp-');
@@ -135,8 +159,11 @@ export function getAssistantId(regionInfo: RegionInfo): number {
  * 生成cookie
  */
 export function generateCookie(refreshToken: string) {
-  const { isUS, isHK, isJP, isSG } = parseRegionFromToken(refreshToken);
-  const token = (isUS || isHK || isJP || isSG) ? refreshToken.substring(3) : refreshToken;
+  const { token: tokenWithRegion } = parseProxyFromToken(refreshToken);
+  const { isUS, isHK, isJP, isSG } = parseRegionFromToken(tokenWithRegion);
+  const token = (isUS || isHK || isJP || isSG)
+    ? tokenWithRegion.substring(3)
+    : tokenWithRegion;
 
   let storeRegion = 'cn-gd';
   if (isUS) storeRegion = 'us';
@@ -220,9 +247,10 @@ export async function request(
   refreshToken: string,
   options: AxiosRequestConfig & { noDefaultParams?: boolean } = {}
 ) {
-  const regionInfo = parseRegionFromToken(refreshToken);
+  const { token: tokenWithRegion, proxyUrl } = parseProxyFromToken(refreshToken);
+  const regionInfo = parseRegionFromToken(tokenWithRegion);
   const { isUS, isHK, isJP, isSG } = regionInfo;
-  const token = await acquireToken(regionInfo.isInternational ? refreshToken.substring(3) : refreshToken);
+  await acquireToken(regionInfo.isInternational ? tokenWithRegion.substring(3) : tokenWithRegion);
   const deviceTime = util.unixTimestamp();
   const sign = util.md5(
     `9e2c|${uri.slice(-7)}|${PLATFORM_CODE}|${VERSION_CODE}|${deviceTime}||11ac`
@@ -284,7 +312,7 @@ export async function request(
     Origin: origin,
     Referer: origin,
     Appid: aid,
-    Cookie: generateCookie(refreshToken),
+    Cookie: generateCookie(tokenWithRegion),
     "Device-Time": deviceTime,
     Sign: sign,
     "Sign-Ver": "1",
@@ -292,8 +320,18 @@ export async function request(
   };
 
   logger.info(`发送请求: ${method.toUpperCase()} ${fullUrl}`);
+  if (proxyUrl) {
+    const maskedProxyUrl = proxyUrl.replace(/\/\/([^@/]+)@/i, "//***@");
+    logger.info(`使用代理: ${maskedProxyUrl}`);
+  }
   logger.info(`请求参数: ${JSON.stringify(requestParams)}`);
   logger.info(`请求数据: ${JSON.stringify(options.data || {})}`);
+
+  const proxyAgent = proxyUrl
+    ? (proxyUrl.toLowerCase().startsWith("socks")
+      ? new SocksProxyAgent(proxyUrl)
+      : new HttpsProxyAgent(proxyUrl))
+    : undefined;
 
   // 添加重试逻辑
   let retries = 0;
@@ -316,6 +354,7 @@ export async function request(
         timeout: 45000, // 增加超时时间到45秒
         validateStatus: () => true, // 允许任何状态码
         ..._.omit(options, "params", "headers"),
+        ...(proxyAgent ? { httpAgent: proxyAgent, httpsAgent: proxyAgent, proxy: false } : {}),
       });
 
       // 记录响应状态和头信息

@@ -54,9 +54,11 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **Japan site**: Add **jp-** prefix, e.g., `Bearer jp-your_session_id`
 > - **Singapore site**: Add **sg-** prefix, e.g., `Bearer sg-your_session_id`
 >
-> **Note 2**: The China site and international sites now support both *text-to-image* and *image-to-image*. The nanobanana and nanobananapro models are available on international sites.
+> **Note 2**: Supports binding proxies (HTTP/SOCKS5, etc.) in the Token, see [Token Bound Proxy Feature](#token-bound-proxy-feature-new) for details.
 >
-> **Note 3**: Resolution rules when using the nanobanana model on international sites:
+> **Note 3**: The China site and international sites now support both *text-to-image* and *image-to-image*. The nanobanana and nanobananapro models are available on international sites.
+>
+> **Note 4**: Resolution rules when using the nanobanana model on international sites:
 > - **US site (us-)**: Images are fixed at **1024x1024** with **2k** resolution, ignoring user-provided ratio and resolution parameters
 > - **Hong Kong/Japan/Singapore sites (hk-/jp-/sg-)**: Fixed **1k** resolution, but supports custom `ratio` values (e.g., 16:9, 4:3, etc.)
 
@@ -484,6 +486,49 @@ curl -X POST http://localhost:5100/v1/chat/completions \
 ```
 
 ### Token API
+
+#### Token Bound Proxy Feature (New)
+
+**Description**: Users can embed a proxy URL in the token to solve issues where IP restrictions lead to 0 credit points during check-in. Each account can be bound to an independent proxy.
+
+**Token Format**:
+```
+[ProxyURL@][RegionPrefix-]session_id
+
+The proxy prefix is at the outermost layer, and the region prefix follows the session_id.
+```
+
+**Supported Proxy Protocols**:
+- HTTP Proxy: `http://host:port`
+- HTTPS Proxy: `https://host:port`
+- SOCKS4 Proxy: `socks4://host:port`
+- SOCKS5 Proxy: `socks5://host:port`
+- Authenticated Proxy: `http://user:pass@host:port`
+
+**Full Examples**:
+| Scenario | Token Format |
+|------|-----------|
+| China site, no proxy | `session_id_xxx` |
+| US site, no proxy | `us-session_id_xxx` |
+| HK site, no proxy | `hk-session_id_xxx` |
+| China site + SOCKS5 Proxy | `socks5://127.0.0.1:1080@session_id_xxx` |
+| US site + HTTP Proxy | `http://127.0.0.1:7890@us-session_id_xxx` |
+| HK site + Auth Proxy | `http://user:pass@proxy.com:8080@hk-session_id_xxx` |
+
+**API Call Examples**:
+```bash
+# Single token with proxy
+curl -X POST http://localhost:5100/v1/images/generations \
+  -H "Authorization: Bearer socks5://127.0.0.1:1080@us-session_id" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "a cat", "model": "jimeng-3.0"}'
+
+# Multiple tokens, some with proxy
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer socks5://1.2.3.4:1080@us-token1,http://5.6.7.8:8080@hk-token2,token3"
+```
+
+**Backward Compatibility**: The token format without a proxy is fully compatible and requires no changes.
 
 #### Check Token Status
 

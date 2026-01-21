@@ -56,9 +56,11 @@ curl -X POST http://localhost:5100/v1/images/generations \
 > - **日本站**：需要添加 **jp-** 前缀，如 `Bearer jp-your_session_id`
 > - **新加坡站**: 需要添加 **sg-** 前缀，如 `Bearer sg-your_session_id`
 >
-> **注意2**: 国内站和国际站现已同时支持*文生图*和*图生图*，国际站添加nanobanana和nanobananapro模型。
+> **注意2**: 支持在 Token 中绑定代理（HTTP/SOCKS5等），详见 [Token 绑定代理功能](#token-绑定代理功能-新)。
 >
-> **注意3**: 国际站使用nanobanana模型时的分辨率规则:
+> **注意3**: 国内站和国际站现已同时支持*文生图*和*图生图*，国际站添加nanobanana和nanobananapro模型。
+>
+> **注意4**: 国际站使用nanobanana模型时的分辨率规则:
 > - **美国站 (us-)**: 生成的图像固定为 **1024x1024** 和 **2k** 清晰度，忽略用户传入的 ratio 和 resolution 参数
 > - **香港/日本/新加坡站 (hk-/jp-/sg-)**: 强制使用 **1k** 清晰度，但支持自定义 ratio 参数（如 16:9、4:3 等）
 
@@ -522,6 +524,49 @@ curl -X POST http://localhost:5100/v1/chat/completions \
 ```
 
 ### Token API
+
+#### Token 绑定代理功能 (新)
+
+**功能说明**：用户可以在 token 中嵌入代理 URL，解决因 IP 限制导致签到获取 0 积分的问题。每个账号可以绑定独立的代理。
+
+**Token 格式**：
+```
+[代理URL@][地区前缀-]session_id
+
+代理前缀在最外层，地区前缀紧跟 session_id
+```
+
+**支持的代理协议**：
+- HTTP 代理: `http://host:port`
+- HTTPS 代理: `https://host:port`
+- SOCKS4 代理: `socks4://host:port`
+- SOCKS5 代理: `socks5://host:port`
+- 带认证的代理: `http://user:pass@host:port`
+
+**完整示例**：
+| 场景 | Token 格式 |
+|------|-----------|
+| 国内站，无代理 | `session_id_xxx` |
+| 美国站，无代理 | `us-session_id_xxx` |
+| 香港站，无代理 | `hk-session_id_xxx` |
+| 国内站 + SOCKS5代理 | `socks5://127.0.0.1:1080@session_id_xxx` |
+| 美国站 + HTTP代理 | `http://127.0.0.1:7890@us-session_id_xxx` |
+| 香港站 + 带认证代理 | `http://user:pass@proxy.com:8080@hk-session_id_xxx` |
+
+**API 调用示例**：
+```bash
+# 单个 token 带代理
+curl -X POST http://localhost:5100/v1/images/generations \
+  -H "Authorization: Bearer socks5://127.0.0.1:1080@us-session_id" \
+  -H "Content-Type: application/json" \
+  -d '{"prompt": "a cat", "model": "jimeng-3.0"}'
+
+# 多个 token，部分带代理
+curl -X POST http://localhost:5100/token/receive \
+  -H "Authorization: Bearer socks5://1.2.3.4:1080@us-token1,http://5.6.7.8:8080@hk-token2,token3"
+```
+
+**向后兼容**：不带代理的 token 格式完全兼容，无需修改。
 
 #### 检查Token状态
 
