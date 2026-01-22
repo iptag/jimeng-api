@@ -42,11 +42,12 @@ export default {
                 const currentCredit = await getCredit(token);
                 if (currentCredit.totalCredit <= 0) {
                     try {
-                        const receivedQuota = await receiveCredit(token);
+                        await receiveCredit(token);
+                        const updatedCredit = await getCredit(token);
                         return {
                             token,
-                            received: true,
-                            receivedQuota
+                            credits: updatedCredit,
+                            received: true
                         }
                     } catch (err) {
                         logger.warn('收取积分失败:', err);
