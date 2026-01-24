@@ -523,6 +523,19 @@ curl -X POST http://localhost:5100/v1/chat/completions \
   }'
 ```
 
+**模型识别机制**:
+- 系统自动根据 `model` 参数判断生成类型
+- 以 `jimeng-video` 开头的模型 → 视频生成
+- 其他模型 → 图像生成
+- 自定义尺寸格式 `model:width×height` 会自动解析并应用
+
+**使用说明**:
+- 该接口完全兼容OpenAI Chat Completions API格式
+- 可以与支持OpenAI格式的客户端和工具直接集成
+- 仅使用 `messages` 数组中最后一条消息的内容作为提示词
+- 流式响应适合需要实时反馈的场景(如聊天界面)
+- 视频生成可能需要1-15分钟,建议启用流式响应以获取进度更新
+
 ### Token API
 
 #### Token 绑定代理功能 (新)
