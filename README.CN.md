@@ -558,6 +558,13 @@ curl -X POST http://localhost:5100/token/receive \
 **请求参数**:
 - `token` (string): 要检查的session token
 
+**响应格式**:
+```json
+{
+  "live": true
+}
+```
+
 #### 获取积分信息
 
 **POST** `/token/points`
@@ -566,6 +573,21 @@ curl -X POST http://localhost:5100/token/receive \
 
 **请求头**:
 - `Authorization`: Bearer token，多个token用逗号分隔
+
+**响应格式**:
+```json
+[
+  {
+    "token": "your_token",
+    "points": {
+      "giftCredit": 10,
+      "purchaseCredit": 0,
+      "vipCredit": 0,
+      "totalCredit": 10
+    }
+  }
+]
+```
 
 #### 领取每日积分
 
@@ -586,10 +608,18 @@ curl -X POST http://localhost:5100/token/receive \
       "purchaseCredit": 0,
       "vipCredit": 0,
       "totalCredit": 10
-    }
+    },
+    "received": true,
+    "error": "可选的错误信息"
   }
 ]
 ```
+
+**响应字段说明**:
+- `token` (string): 处理的token
+- `credits` (object): 操作后的当前积分余额
+- `received` (boolean): 是否成功领取积分（`true` 表示已领取，`false` 表示已有积分或领取失败）
+- `error` (string, 可选): 领取失败时的错误信息
 
 **使用示例**:
 ```bash

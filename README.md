@@ -527,6 +527,13 @@ Check if a token is valid and active.
 **Request Parameters**:
 - `token` (string): The session token to check
 
+**Response Format**:
+```json
+{
+  "live": true
+}
+```
+
 #### Get Credit Points
 
 **POST** `/token/points`
@@ -535,6 +542,21 @@ Get the current credit balance for one or more tokens.
 
 **Request Headers**:
 - `Authorization`: Bearer token(s), multiple tokens separated by commas
+
+**Response Format**:
+```json
+[
+  {
+    "token": "your_token",
+    "points": {
+      "giftCredit": 10,
+      "purchaseCredit": 0,
+      "vipCredit": 0,
+      "totalCredit": 10
+    }
+  }
+]
+```
 
 #### Receive Daily Credits
 
@@ -555,10 +577,18 @@ Manually trigger daily credit collection (check-in). Attempts to claim credits a
       "purchaseCredit": 0,
       "vipCredit": 0,
       "totalCredit": 10
-    }
+    },
+    "received": true,
+    "error": "optional error message"
   }
 ]
 ```
+
+**Response Fields**:
+- `token` (string): The token that was processed
+- `credits` (object): Current credit balance after operation
+- `received` (boolean): Whether credits were successfully claimed (`true` if claimed, `false` if already had credits or claim failed)
+- `error` (string, optional): Error message if claim failed
 
 **Usage Example**:
 ```bash
