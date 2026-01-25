@@ -1,6 +1,5 @@
 import Response from '@/lib/response/Response.ts';
 import images from "./images.ts";
-import chat from "./chat.ts";
 import ping from "./ping.ts";
 import token from './token.js';
 import models from './models.ts';
@@ -20,7 +19,6 @@ export default [
                         images: '/v1/images/generations',
                         compositions: '/v1/images/compositions',
                         videos: '/v1/videos/generations',
-                        chat: '/v1/chat/completions',
                         models: '/v1/models',
                         health: '/ping'
                     }
@@ -29,7 +27,6 @@ export default [
         }
     },
     images,
-    chat,
     ping,
     token,
     models,

@@ -504,25 +504,6 @@ curl -X POST http://localhost:5100/v1/videos/generations \
 
 ```
 
-### 聊天完成
-
-**POST** `/v1/chat/completions`
-
-```bash
-curl -X POST http://localhost:5100/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -d '{
-    "model": "jimeng-4.5",
-    "messages": [
-      {
-        "role": "user",
-        "content": "画一幅山水画"
-      }
-    ]
-  }'
-```
-
 ### Token API
 
 #### Token 绑定代理功能 (新)
@@ -638,40 +619,6 @@ curl -X POST http://localhost:5100/token/receive \
 }
 ```
 
-### 聊天完成响应
-```json
-{
-  "id": "chatcmpl-123",
-  "object": "chat.completion",
-  "created": 1759058768,
-  "model": "jimeng-4.5",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "![image](https://example.com/generated-image.jpg)"
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 10,
-    "completion_tokens": 20,
-    "total_tokens": 30
-  }
-}
-```
-
-### 流式响应 (SSE)
-```
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":0,"delta":{"role":"assistant","content":"🎨 图像生成中，请稍候..."},"finish_reason":null}]}
-
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":1,"delta":{"role":"assistant","content":"![image](https://example.com/image.jpg)"},"finish_reason":"stop"}]}
-
-data: [DONE]
-```
-
 ## 🏗️ 项目架构
 
 ```
@@ -681,8 +628,7 @@ jimeng-api/
 │   │   ├── controllers/          # 控制器层
 │   │   │   ├── core.ts          # 核心功能（网络请求、文件处理）
 │   │   │   ├── images.ts        # 图像生成逻辑
-│   │   │   ├── videos.ts        # 视频生成逻辑
-│   │   │   └── chat.ts          # 聊天接口逻辑
+│   │   │   └── videos.ts        # 视频生成逻辑
 │   │   ├── routes/              # 路由定义
 │   │   └── consts/              # 常量定义
 │   ├── lib/                     # 核心库

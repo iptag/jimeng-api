@@ -473,18 +473,6 @@ curl -X POST http://localhost:5100/v1/videos/generations \
 
 ```
 
-### Chat Completions
-
-**POST** `/v1/chat/completions`
-
-```bash
-curl -X POST http://localhost:5100/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -d \
-    "{\"model\": \"jimeng-4.5\", \"messages\": [ { \"role\": \"user\", \"content\": \"Draw a landscape painting\" } ]}"
-```
-
 ### Token API
 
 #### Token Bound Proxy Feature (New)
@@ -600,40 +588,6 @@ curl -X POST http://localhost:5100/token/receive \
 }
 ```
 
-### Chat Completion Response
-```json
-{
-  "id": "chatcmpl-123",
-  "object": "chat.completion",
-  "created": 1759058768,
-  "model": "jimeng-4.5",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "![image](https://example.com/generated-image.jpg)"
-      },
-      "finish_reason": "stop"
-    }
-  ],
-  "usage": {
-    "prompt_tokens": 10,
-    "completion_tokens": 20,
-    "total_tokens": 30
-  }
-}
-```
-
-### Stream Response (SSE)
-```
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":0,"delta":{"role":"assistant","content":"🎨 Generating image, please wait..."},"finish_reason":null}]}
-
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1759058768,"model":"jimeng-4.5","choices":[{"index":1,"delta":{"role":"assistant","content":"![image](https://example.com/image.jpg)"},"finish_reason":"stop"}]}
-
-data: [DONE]
-```
-
 ## 🏗️ Project Architecture
 
 ```
@@ -643,8 +597,7 @@ jimeng-api/
 │   │   ├── controllers/          # Controller layer
 │   │   │   ├── core.ts          # Core functions (network requests, file handling)
 │   │   │   ├── images.ts        # Image generation logic
-│   │   │   ├── videos.ts        # Video generation logic
-│   │   │   └── chat.ts          # Chat interface logic
+│   │   │   └── videos.ts        # Video generation logic
 │   │   ├── routes/              # Route definitions
 │   │   └── consts/              # Constant definitions
 │   ├── lib/                     # Core library
