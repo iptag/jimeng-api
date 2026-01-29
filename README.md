@@ -649,7 +649,6 @@ jimeng-api/
 │   │   ├── exceptions/           # Exception classes
 │   │   │   ├── Exception.ts      # Base exception
 │   │   │   └── APIException.ts   # API exception
-│   │   ├── interfaces/           # Interface definitions
 │   │   ├── request/              # Request handling
 │   │   │   └── Request.ts        # Request wrapper
 │   │   ├── response/             # Response handling
@@ -670,7 +669,6 @@ jimeng-api/
 │   │   ├── image-utils.ts        # Image processing utility
 │   │   ├── region-utils.ts       # Region handling utility
 │   │   └── util.ts               # Common utility functions
-│   ├── daemon.ts                 # Daemon process
 │   └── index.ts                  # Entry file
 ├── configs/                      # Configuration files
 ├── Dockerfile                    # Docker configuration

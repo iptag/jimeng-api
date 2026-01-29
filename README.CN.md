@@ -680,7 +680,6 @@ jimeng-api/
 │   │   ├── exceptions/           # 异常类
 │   │   │   ├── Exception.ts      # 基础异常
 │   │   │   └── APIException.ts   # API异常
-│   │   ├── interfaces/           # 接口定义
 │   │   ├── request/              # 请求处理
 │   │   │   └── Request.ts        # 请求封装
 │   │   ├── response/             # 响应处理
@@ -701,7 +700,6 @@ jimeng-api/
 │   │   ├── image-utils.ts        # 图片处理工具
 │   │   ├── region-utils.ts       # 区域处理工具
 │   │   └── util.ts               # 通用工具函数
-│   ├── daemon.ts                 # 守护进程
 │   └── index.ts                  # 入口文件
 ├── configs/                      # 配置文件
 ├── Dockerfile                    # Docker配置
