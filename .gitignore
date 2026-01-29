@@ -56,3 +56,6 @@ tmp/
 temp/
 jimeng-*.md
 .ace-tool/
+
+# Ignore gitignore itself (as requested)
+.gitignore

@@ -10,7 +10,7 @@ import EX from "@/api/consts/exceptions.ts";
 import logger from "@/lib/logger.ts";
 import util from "@/lib/util.ts";
 import { JimengErrorHandler, JimengErrorResponse } from "@/lib/error-handler.ts";
-import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK } from "@/api/consts/dreamina.ts";
+import { BASE_URL_DREAMINA_US, BASE_URL_DREAMINA_HK, DA_VERSION, WEB_VERSION } from "@/api/consts/dreamina.ts";
 
 import {
   BASE_URL_CN,
@@ -300,10 +300,10 @@ export async function request(
     device_platform: "web",
     region: region,
     ...(isUS || isHK || isJP || isSG ? {} : { webId: WEB_ID }),
-    da_version: "3.3.8",
+    da_version: DA_VERSION,
     os: "windows",
     web_component_open_flag: 1,
-    web_version: "7.5.0",
+    web_version: WEB_VERSION,
     aigc_features: "app_lip_sync",
     ...(options.params || {}),
   };
