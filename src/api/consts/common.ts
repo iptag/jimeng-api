@@ -27,7 +27,7 @@ export const REGION_SG = "SG";
 export const PLATFORM_CODE = "7";
 
 // 版本代码
-export const VERSION_CODE = "5.8.0";
+export const VERSION_CODE = "8.4.0";
 
 // 默认模型
 export const DEFAULT_IMAGE_MODEL = "jimeng-4.5";

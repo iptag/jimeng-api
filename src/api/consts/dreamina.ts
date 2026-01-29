@@ -8,5 +8,5 @@ export const BASE_URL_IMAGEX_HK = "https://imagex-normal-sg.capcutapi.com";
 
 
 export const WEB_VERSION = "7.5.0";
-export const DA_VERSION = "3.3.2";
+export const DA_VERSION = "3.3.7";
 export const AIGC_FEATURES = "app_lip_sync";

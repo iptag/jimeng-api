@@ -300,7 +300,7 @@ export async function request(
     device_platform: "web",
     region: region,
     ...(isUS || isHK || isJP || isSG ? {} : { webId: WEB_ID }),
-    da_version: "3.3.2",
+    da_version: "3.3.7",
     web_component_open_flag: 1,
     web_version: "7.5.0",
     aigc_features: "app_lip_sync",
