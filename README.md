@@ -624,30 +624,57 @@ curl -X POST http://localhost:5100/token/receive \
 jimeng-api/
 ├── src/
 │   ├── api/
+│   │   ├── builders/             # Request builders
+│   │   │   └── payload-builder.ts  # API request payload builder
 │   │   ├── controllers/          # Controller layer
-│   │   │   ├── core.ts          # Core functions (network requests, file handling)
-│   │   │   ├── images.ts        # Image generation logic
-│   │   │   └── videos.ts        # Video generation logic
-│   │   ├── routes/              # Route definitions
-│   │   └── consts/              # Constant definitions
-│   ├── lib/                     # Core library
-│   │   ├── configs/            # Configuration loading
-│   │   ├── consts/             # Constants
-│   │   ├── exceptions/         # Exception classes
-│   │   ├── interfaces/         # Interface definitions
-│   │   ├── request/            # Request handling
-│   │   ├── response/           # Response handling
-│   │   ├── config.ts           # Configuration center
-│   │   ├── server.ts           # Server core
-│   │   ├── logger.ts           # Logger
-│   │   ├── error-handler.ts    # Unified error handling
-│   │   ├── smart-poller.ts     # Smart poller
-│   │   └── aws-signature.ts    # AWS signature
-│   ├── daemon.ts               # Daemon process
-│   └── index.ts               # Entry file
-├── configs/                    # Configuration files
-├── Dockerfile                 # Docker configuration
-└── package.json              # Project configuration
+│   │   │   ├── core.ts           # Core functions (network requests, file handling)
+│   │   │   ├── images.ts         # Image generation logic
+│   │   │   └── videos.ts         # Video generation logic
+│   │   ├── routes/               # Route definitions
+│   │   │   ├── index.ts          # Route entry
+│   │   │   ├── images.ts         # Image generation routes
+│   │   │   ├── videos.ts         # Video generation routes
+│   │   │   ├── token.ts          # Token management routes
+│   │   │   ├── models.ts         # Model list routes
+│   │   │   └── ping.ts           # Health check routes
+│   │   └── consts/               # Constant definitions
+│   │       ├── common.ts         # Common constants
+│   │       ├── dreamina.ts       # Dreamina site constants
+│   │       └── exceptions.ts     # Exception constants
+│   ├── lib/                      # Core library
+│   │   ├── configs/              # Configuration loading
+│   │   │   ├── service-config.ts # Service configuration
+│   │   │   └── system-config.ts  # System configuration
+│   │   ├── consts/               # Constants
+│   │   ├── exceptions/           # Exception classes
+│   │   │   ├── Exception.ts      # Base exception
+│   │   │   └── APIException.ts   # API exception
+│   │   ├── interfaces/           # Interface definitions
+│   │   ├── request/              # Request handling
+│   │   │   └── Request.ts        # Request wrapper
+│   │   ├── response/             # Response handling
+│   │   │   ├── Response.ts       # Response wrapper
+│   │   │   ├── Body.ts           # Response body base
+│   │   │   ├── SuccessfulBody.ts # Success response body
+│   │   │   └── FailureBody.ts    # Failure response body
+│   │   ├── config.ts             # Configuration center
+│   │   ├── server.ts             # Server core
+│   │   ├── logger.ts             # Logger
+│   │   ├── error-handler.ts      # Unified error handling
+│   │   ├── smart-poller.ts       # Smart poller
+│   │   ├── aws-signature.ts      # AWS signature
+│   │   ├── environment.ts        # Environment variables
+│   │   ├── initialize.ts         # Initialization logic
+│   │   ├── http-status-codes.ts  # HTTP status code constants
+│   │   ├── image-uploader.ts     # Image upload utility
+│   │   ├── image-utils.ts        # Image processing utility
+│   │   ├── region-utils.ts       # Region handling utility
+│   │   └── util.ts               # Common utility functions
+│   ├── daemon.ts                 # Daemon process
+│   └── index.ts                  # Entry file
+├── configs/                      # Configuration files
+├── Dockerfile                    # Docker configuration
+└── package.json                  # Project configuration
 ```
 
 ## 🔧 Core Components
