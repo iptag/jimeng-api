@@ -300,7 +300,8 @@ export async function request(
     device_platform: "web",
     region: region,
     ...(isUS || isHK || isJP || isSG ? {} : { webId: WEB_ID }),
-    da_version: "3.3.7",
+    da_version: "3.3.8",
+    os: "windows",
     web_component_open_flag: 1,
     web_version: "7.5.0",
     aigc_features: "app_lip_sync",
@@ -386,8 +387,8 @@ export async function request(
 
       // 如果是网络错误或超时，尝试重试
       if ((error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' ||
-           error.message.includes('timeout') || error.message.includes('network')) &&
-          retries < maxRetries) {
+        error.message.includes('timeout') || error.message.includes('network')) &&
+        retries < maxRetries) {
         retries++;
         continue;
       }
@@ -411,14 +412,14 @@ export async function request(
     logger.error(error.message);
     throw error;
   }
- }
+}
 
- /**
-  * 预检查文件URL有效性
-  *
-  * @param fileUrl 文件URL
-  */
- export async function checkFileUrl(fileUrl: string) {
+/**
+ * 预检查文件URL有效性
+ *
+ * @param fileUrl 文件URL
+ */
+export async function checkFileUrl(fileUrl: string) {
   if (util.isBASE64Data(fileUrl)) return;
   const result = await axios.head(fileUrl, {
     timeout: 15000,

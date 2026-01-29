@@ -27,6 +27,7 @@ export const REGION_SG = "SG";
 export const PLATFORM_CODE = "7";
 
 // 版本代码
+// 版本代码
 export const VERSION_CODE = "8.4.0";
 
 // 默认模型
@@ -35,7 +36,8 @@ export const DEFAULT_IMAGE_MODEL_US = "jimeng-4.5";
 export const DEFAULT_VIDEO_MODEL = "jimeng-video-3.5-pro";
 
 // 草稿版本
-export const DRAFT_VERSION = "3.3.7";
+// 草稿版本
+export const DRAFT_VERSION = "3.3.8";
 export const DRAFT_MIN_VERSION = "3.0.2";
 
 // 图像模型映射
@@ -116,7 +118,7 @@ export const POLLING_CONFIG = {
 
 // 支持的图片比例和分辨率
 export const RESOLUTION_OPTIONS = {
-  "1k":{
+  "1k": {
     "1:1": { width: 1024, height: 1024, ratio: 1 },
     "4:3": { width: 768, height: 1024, ratio: 4 },
     "3:4": { width: 1024, height: 768, ratio: 2 },
@@ -128,24 +130,24 @@ export const RESOLUTION_OPTIONS = {
   },
 
   "2k": {
-    "1:1": {width: 2048, height: 2048, ratio: 1},
-    "4:3": {width: 2304, height: 1728, ratio: 4},
-    "3:4": {width: 1728, height: 2304, ratio: 2},
-    "16:9": {width: 2560, height: 1440, ratio: 3},
-    "9:16": {width: 1440, height: 2560, ratio: 5},
-    "3:2": {width: 2496, height: 1664, ratio: 7},
-    "2:3": {width: 1664, height: 2496, ratio: 6},
-    "21:9": {width: 3024, height: 1296, ratio: 8},
+    "1:1": { width: 2048, height: 2048, ratio: 1 },
+    "4:3": { width: 2304, height: 1728, ratio: 4 },
+    "3:4": { width: 1728, height: 2304, ratio: 2 },
+    "16:9": { width: 2560, height: 1440, ratio: 3 },
+    "9:16": { width: 1440, height: 2560, ratio: 5 },
+    "3:2": { width: 2496, height: 1664, ratio: 7 },
+    "2:3": { width: 1664, height: 2496, ratio: 6 },
+    "21:9": { width: 3024, height: 1296, ratio: 8 },
   },
   "4k": {
-    "1:1": {width: 4096, height: 4096, ratio: 101},
-    "4:3": {width: 4608, height: 3456, ratio: 104},
-    "3:4": {width: 3456, height: 4608, ratio: 102},
-    "16:9": {width: 5120, height: 2880, ratio: 103},
-    "9:16": {width: 2880, height: 5120, ratio: 105},
-    "3:2": {width: 4992, height: 3328, ratio: 107},
-    "2:3": {width: 3328, height: 4992, ratio: 106},
-    "21:9": {width: 6048, height: 2592, ratio: 108}
+    "1:1": { width: 4096, height: 4096, ratio: 101 },
+    "4:3": { width: 4608, height: 3456, ratio: 104 },
+    "3:4": { width: 3456, height: 4608, ratio: 102 },
+    "16:9": { width: 5120, height: 2880, ratio: 103 },
+    "9:16": { width: 2880, height: 5120, ratio: 105 },
+    "3:2": { width: 4992, height: 3328, ratio: 107 },
+    "2:3": { width: 3328, height: 4992, ratio: 106 },
+    "21:9": { width: 6048, height: 2592, ratio: 108 }
   }
 };
 
