@@ -218,7 +218,26 @@ export class SmartPoller {
         }
         
       } catch (error) {
-        logger.error(`轮询过程中发生错误: ${error.message}`);
+        // 判断是否为可重试的网络错误
+        const retryableErrorCodes = [
+          'ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND',
+          'ECONNREFUSED', 'EAI_AGAIN', 'EPIPE', 'ENETUNREACH', 'EHOSTUNREACH'
+        ];
+        const isRetryableError = retryableErrorCodes.includes(error.code) ||
+          error.message?.includes('timeout') ||
+          error.message?.includes('network') ||
+          error.message?.includes('ECONNRESET') ||
+          error.message?.includes('socket hang up');
+
+        // 网络错误时进行轮询级别的重试，而不是直接中断整个流程
+        if (isRetryableError && this.pollCount < this.options.maxPollCount) {
+          logger.warn(`轮询过程中发生网络错误 (${error.code || error.message})，等待后继续轮询...`);
+          await new Promise(resolve => setTimeout(resolve, this.options.pollInterval));
+          continue;
+        }
+
+        // 不可重试的错误或已达到最大轮询次数，抛出异常
+        logger.error(`轮询过程中发生不可恢复的错误: ${error.message}`);
         throw error;
       }
     }

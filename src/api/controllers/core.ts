@@ -386,9 +386,19 @@ export async function request(
       logger.error(`请求失败 (尝试 ${retries + 1}/${maxRetries + 1}): ${error.message}`);
 
       // 如果是网络错误或超时，尝试重试
-      if ((error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT' ||
-           error.message.includes('timeout') || error.message.includes('network')) &&
-          retries < maxRetries) {
+      // 包含常见的网络错误：ECONNRESET（连接重置）、ENOTFOUND（DNS解析失败）、
+      // ECONNREFUSED（连接被拒绝）、EAI_AGAIN（DNS临时失败）、EPIPE（管道破裂）
+      const retryableErrorCodes = [
+        'ECONNABORTED', 'ETIMEDOUT', 'ECONNRESET', 'ENOTFOUND',
+        'ECONNREFUSED', 'EAI_AGAIN', 'EPIPE', 'ENETUNREACH', 'EHOSTUNREACH'
+      ];
+      const isRetryableError = retryableErrorCodes.includes(error.code) ||
+        error.message.includes('timeout') ||
+        error.message.includes('network') ||
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('socket hang up');
+
+      if (isRetryableError && retries < maxRetries) {
         retries++;
         continue;
       }
