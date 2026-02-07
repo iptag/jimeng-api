@@ -410,6 +410,7 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 - `duration` (number, optional): Video duration in seconds. Supported values vary by model:
   - `jimeng-video-veo3` / `jimeng-video-veo3.1`: `8` (fixed)
   - `jimeng-video-sora2`: `4` (default), `8`, `12`
+  - `jimeng-video-4.0-pro` / `jimeng-video-4.0`: `5` (default), `10`, `15`
   - `jimeng-video-3.5-pro`: `5` (default), `10`, `12`
   - Other models: `5` (default), `10`
 - `file_paths` (array, optional): An array of image URLs to specify the **start frame** (1st element) and **end frame** (2nd element) of the video.
@@ -423,6 +424,8 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 > - **Important**: Once image input is provided (image-to-video or first-last frame video), the `ratio` parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio. The `resolution` parameter remains effective.
 
 **Supported Video Models**:
+- `jimeng-video-4.0-pro` - Seedance 2.0 Professional Edition, China site only, supports 15s duration **(Latest)**
+- `jimeng-video-4.0` - Seedance 2.0 Standard Edition, China site only, supports 15s duration **(Latest)**
 - `jimeng-video-3.5-pro` - Professional Edition v3.5, works on all sites **(Default)**
 - `jimeng-video-veo3` - Veo3 model, Asia international sites only (HK/JP/SG), fixed 8s duration
 - `jimeng-video-veo3.1` - Veo3.1 model, Asia international sites only (HK/JP/SG), fixed 8s duration

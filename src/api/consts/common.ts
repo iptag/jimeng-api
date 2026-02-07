@@ -63,6 +63,8 @@ export const IMAGE_MODEL_MAP_US = {
 
 // 视频模型映射 - 国内站 (CN)
 export const VIDEO_MODEL_MAP = {
+  "jimeng-video-4.0-pro": "dreamina_seedance_40_pro",
+  "jimeng-video-4.0": "dreamina_seedance_40",
   "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
   "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",

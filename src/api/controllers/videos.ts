@@ -41,6 +41,12 @@ function getVideoBenefitType(model: string): string {
   if (model.includes("sora2")) {
     return "generate_video_sora2";
   }
+  if (model.includes("40_pro")) {
+    return "dreamina_video_seedance_20_pro";
+  }
+  if (model.includes("40")) {
+    return "dreamina_video_seedance_20";
+  }
   if (model.includes("3.5_pro")) {
     return "dreamina_video_seedance_15_pro";
   }

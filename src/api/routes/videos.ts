@@ -23,8 +23,8 @@ export default {
                 .validate('body.resolution', v => _.isUndefined(v) || _.isString(v))
                 .validate('body.duration', v => {
                     if (_.isUndefined(v)) return true;
-                    // 支持的时长: 4/8/12 (sora2) 和 5/10 (其他模型)
-                    const validDurations = [4, 5, 8, 10, 12];
+                    // 支持的时长: 4/8/12 (sora2)、5/10 (其他模型)、15 (4.0模型)
+                    const validDurations = [4, 5, 8, 10, 12, 15];
                     // 对于 multipart/form-data，允许字符串类型的数字
                     if (isMultiPart && typeof v === 'string') {
                         const num = parseInt(v);
