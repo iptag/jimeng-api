@@ -124,6 +124,7 @@ export async function generateVideo(
   const isVeo3 = model.includes("veo3");
   const isSora2 = model.includes("sora2");
   const is35Pro = model.includes("3.5_pro");
+  const is40 = model.includes("seedance_40"); // 4.0 / 4.0-pro，支持 4-15s 任意可选
   // 只有 video-3.0 和 video-3.0-fast 支持 resolution 参数（3.0-pro 和 3.5-pro 不支持）
   const supportsResolution = (model.includes("vgfm_3.0") || model.includes("vgfm_3.0_fast")) && !model.includes("_pro");
 
@@ -131,6 +132,7 @@ export async function generateVideo(
   // veo3 模型固定 8 秒
   // sora2 模型支持 4秒、8秒、12秒，默认4秒
   // 3.5-pro 模型支持 5秒、10秒、12秒，默认5秒
+  // 4.0/4.0-pro 模型支持 4-15秒 任意可选，默认5秒
   // 其他模型支持 5秒、10秒，默认5秒
   let durationMs: number;
   let actualDuration: number;
@@ -159,6 +161,10 @@ export async function generateVideo(
       durationMs = 5000;
       actualDuration = 5;
     }
+  } else if (is40) {
+    const clamped = Math.min(15, Math.max(4, Math.round(Number(duration))));
+    durationMs = clamped * 1000;
+    actualDuration = clamped;
   } else {
     durationMs = duration === 10 ? 10000 : 5000;
     actualDuration = duration === 10 ? 10 : 5;
