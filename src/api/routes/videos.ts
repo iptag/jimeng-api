@@ -23,15 +23,16 @@ export default {
                 .validate('body.resolution', v => _.isUndefined(v) || _.isString(v))
                 .validate('body.duration', v => {
                     if (_.isUndefined(v)) return true;
-                    // 支持的时长: 4/8/12 (sora2)、5/10 (其他模型)、15 (4.0模型)
-                    const validDurations = [4, 5, 8, 10, 12, 15];
-                    // 对于 multipart/form-data，允许字符串类型的数字
+                    // 支持的时长范围: 4~15 (seedance 2.0 支持任意整数秒)
+                    let num: number;
                     if (isMultiPart && typeof v === 'string') {
-                        const num = parseInt(v);
-                        return validDurations.includes(num);
+                        num = parseInt(v);
+                    } else if (_.isFinite(v)) {
+                        num = v as number;
+                    } else {
+                        return false;
                     }
-                    // 对于 JSON，要求数字类型
-                    return _.isFinite(v) && validDurations.includes(v);
+                    return Number.isInteger(num) && num >= 4 && num <= 15;
                 })
                 // 限制图片URL数量最多2个
                 .validate('body.file_paths', v => _.isUndefined(v) || (_.isArray(v) && v.length <= 2))
