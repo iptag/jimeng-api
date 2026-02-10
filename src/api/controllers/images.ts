@@ -6,7 +6,7 @@ import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request, parseRegionFromToken, getAssistantId, RegionInfo } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
-import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_MODEL_US, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US } from "@/api/consts/common.ts";
+import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_MODEL_US, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US, IMAGE_MODEL_MAP_ASIA } from "@/api/consts/common.ts";
 import { uploadImageFromUrl, uploadImageBuffer } from "@/lib/image-uploader.ts";
 import { extractImageUrls } from "@/lib/image-utils.ts";
 import {
@@ -31,14 +31,22 @@ export interface ModelResult {
 
 /**
  * 获取模型映射
- * - 国际站不支持的模型会抛出错误
+ * - 根据站点选择不同的模型映射 (CN / US / ASIA)
+ * - 不支持的模型会抛出错误
  * - 但如果传入的是国内站默认模型，国际站会自动回退到国际站默认模型
  */
-export function getModel(model: string, isInternational: boolean): ModelResult {
-  const modelMap = isInternational ? IMAGE_MODEL_MAP_US : IMAGE_MODEL_MAP;
-  const defaultModel = isInternational ? DEFAULT_MODEL_US : DEFAULT_MODEL;
+export function getModel(model: string, regionInfo: RegionInfo): ModelResult {
+  let modelMap: Record<string, string>;
+  if (regionInfo.isUS) {
+    modelMap = IMAGE_MODEL_MAP_US;
+  } else if (regionInfo.isHK || regionInfo.isJP || regionInfo.isSG) {
+    modelMap = IMAGE_MODEL_MAP_ASIA;
+  } else {
+    modelMap = IMAGE_MODEL_MAP;
+  }
+  const defaultModel = regionInfo.isInternational ? DEFAULT_MODEL_US : DEFAULT_MODEL;
 
-  if (isInternational && !modelMap[model]) {
+  if (regionInfo.isInternational && !modelMap[model]) {
     // 如果传入的是国内站默认模型，回退到国际站默认模型
     if (model === DEFAULT_MODEL) {
       logger.info(`国际站不支持默认模型 "${model}"，回退到 "${defaultModel}"`);
@@ -91,7 +99,7 @@ export async function generateImageComposition(
   refreshToken: string
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
-  const { model, userModel } = getModel(_model, regionInfo.isInternational);
+  const { model, userModel } = getModel(_model, regionInfo);
 
   // 使用 payload-builder 处理分辨率
   const resolutionResult = resolveResolution(userModel, regionInfo, resolution, ratio);
@@ -297,7 +305,7 @@ export async function generateImages(
   refreshToken: string
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
-  const { model, userModel } = getModel(_model, regionInfo.isInternational);
+  const { model, userModel } = getModel(_model, regionInfo);
   logger.info(`使用模型: ${userModel} 映射模型: ${model} 分辨率: ${resolution} 比例: ${ratio} 精细度: ${sampleStrength} 智能比例: ${intelligentRatio}`);
 
   return await generateImagesInternal(userModel, prompt, { ratio, resolution, sampleStrength, negativePrompt, intelligentRatio }, refreshToken);
@@ -325,7 +333,7 @@ async function generateImagesInternal(
   refreshToken: string
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
-  const { model, userModel } = getModel(_model, regionInfo.isInternational);
+  const { model, userModel } = getModel(_model, regionInfo);
 
   // 使用 payload-builder 处理分辨率
   const resolutionResult = resolveResolution(userModel, regionInfo, resolution, ratio);
@@ -498,7 +506,7 @@ async function generateJimeng4xMultiImages(
   refreshToken: string
 ) {
   const regionInfo = parseRegionFromToken(refreshToken);
-  const { model, userModel } = getModel(_model, regionInfo.isInternational);
+  const { model, userModel } = getModel(_model, regionInfo);
 
   // 使用 payload-builder 处理分辨率
   const resolutionResult = resolveResolution(userModel, regionInfo, resolution, ratio);

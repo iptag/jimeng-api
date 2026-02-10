@@ -112,10 +112,8 @@ export function resolveResolution(
 
 /**
  * benefitCount 规则
- * - CN: 全部不加
- * - US: 仅 jimeng-4.0 / jimeng-3.0 加
- * - HK/JP/SG: nanobanana 不加，其余(含 nanobananapro)加
- * - 多图模式: 所有站点都不加
+ * - 生图模式统一返回 4
+ * - 多图模式: 不加
  */
 export function getBenefitCount(
   userModel: string,
@@ -124,20 +122,7 @@ export function getBenefitCount(
 ): number | undefined {
   if (isMultiImage) return undefined;
 
-  const regionKey = getRegionKey(regionInfo);
-
-  if (regionKey === "CN") return undefined;
-
-  if (regionKey === "US") {
-    return ["jimeng-4.5", "jimeng-4.0", "jimeng-3.0"].includes(userModel) ? 4 : undefined;
-  }
-
-  if (regionKey === "HK" || regionKey === "JP" || regionKey === "SG") {
-    if (userModel === "nanobanana") return undefined;
-    return 4;
-  }
-
-  return undefined;
+  return 4;
 }
 
 export type GenerateMode = "text2img" | "img2img";
@@ -175,8 +160,8 @@ export function buildCoreParam(options: BuildCoreParamOptions) {
     mode = "text2img",
   } = options;
 
-  // ⚠️ intelligent_ratio 仅对 jimeng-4.0/jimeng-4.1/jimeng-4.5 模型有效
-  const effectiveIntelligentRatio = ['jimeng-4.0', 'jimeng-4.1', 'jimeng-4.5'].includes(userModel) ? intelligentRatio : false;
+  // ⚠️ intelligent_ratio 仅对 jimeng-4.0/jimeng-4.1/jimeng-4.5/jimeng-4.6/jimeng-5.0 模型有效
+  const effectiveIntelligentRatio = ['jimeng-4.0', 'jimeng-4.1', 'jimeng-4.5', 'jimeng-4.6', 'jimeng-5.0'].includes(userModel) ? intelligentRatio : false;
 
   // 图生图时，prompt 前缀规则: 每张图片对应 2 个 #
   // 1张图 → ##, 2张图 → ####, 3张图 → ######

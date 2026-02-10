@@ -40,6 +40,8 @@ export const DRAFT_MIN_VERSION = "3.0.2";
 
 // 图像模型映射
 export const IMAGE_MODEL_MAP = {
+  "jimeng-5.0": "high_aes_general_v50",
+  "jimeng-4.6": "high_aes_general_v42",
   "jimeng-4.5": "high_aes_general_v40l",
   "jimeng-4.1": "high_aes_general_v41",
   "jimeng-4.0": "high_aes_general_v40",
@@ -61,10 +63,21 @@ export const IMAGE_MODEL_MAP_US = {
   "nanobananapro": "dreamina_image_lib_1",
 };
 
+// 图像模型映射 - 亚洲国际站 (HK/JP/SG)
+export const IMAGE_MODEL_MAP_ASIA = {
+  "jimeng-5.0": "high_aes_general_v50",
+  "jimeng-4.6": "high_aes_general_v42",
+  "jimeng-4.5": "high_aes_general_v40l",
+  "jimeng-4.1": "high_aes_general_v41",
+  "jimeng-4.0": "high_aes_general_v40",
+  "jimeng-3.0": "high_aes_general_v30l:general_v3.0_18b",
+  "nanobanana": "external_model_gemini_flash_image_v25",
+  "nanobananapro": "dreamina_image_lib_1",
+};
+
 // 视频模型映射 - 国内站 (CN)
 export const VIDEO_MODEL_MAP = {
-  "jimeng-video-4.0-pro": "dreamina_seedance_40_pro",
-  "jimeng-video-4.0": "dreamina_seedance_40",
+  "jimeng-video-seedance-2.0": "dreamina_seedance_40_pro",
   "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
   "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",
