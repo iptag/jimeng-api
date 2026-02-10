@@ -47,11 +47,6 @@ export const IMAGE_MODEL_MAP = {
   "jimeng-4.0": "high_aes_general_v40",
   "jimeng-3.1": "high_aes_general_v30l_art_fangzhou:general_v3.0_18b",
   "jimeng-3.0": "high_aes_general_v30l:general_v3.0_18b",
-  "jimeng-2.1": "high_aes_general_v21_L:general_v2.1_L",
-  "jimeng-2.0-pro": "high_aes_general_v20_L:general_v2.0_L",
-  "jimeng-2.0": "high_aes_general_v20:general_v2.0",
-  "jimeng-1.4": "high_aes_general_v14:general_v1.4",
-  "jimeng-xl-pro": "text2img_xl_sft"
 };
 
 export const IMAGE_MODEL_MAP_US = {

@@ -262,8 +262,6 @@ curl -X POST http://localhost:5100/v1/images/generations \
 - `jimeng-4.0`: Works on all sites.
 - `jimeng-3.1`: China site only.
 - `jimeng-3.0`: Works on all sites.
-- `jimeng-2.1`: China site only.
-- `jimeng-xl-pro`
 
 **Supported Ratios and Corresponding Resolutions**:
 | resolution | ratio | Resolution |

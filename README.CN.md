@@ -276,8 +276,6 @@ curl -X POST http://localhost:5100/v1/images/generations \
 - `jimeng-4.0`: 国内、国际站均支持
 - `jimeng-3.1`: 仅国内站支持
 - `jimeng-3.0`: 国内、国际站均支持
-- `jimeng-2.1`: 仅国内站支持
-- `jimeng-xl-pro`
 
 
 **支持的比例及对应分辨率** ：
