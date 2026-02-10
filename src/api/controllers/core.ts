@@ -396,7 +396,8 @@ export async function request(
         error.message.includes('timeout') ||
         error.message.includes('network') ||
         error.message.includes('ECONNRESET') ||
-        error.message.includes('socket hang up');
+        error.message.includes('socket hang up') ||
+        error.message.includes('Proxy connection');
 
       if (isRetryableError && retries < maxRetries) {
         retries++;

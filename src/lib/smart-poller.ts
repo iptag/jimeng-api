@@ -227,7 +227,8 @@ export class SmartPoller {
           error.message?.includes('timeout') ||
           error.message?.includes('network') ||
           error.message?.includes('ECONNRESET') ||
-          error.message?.includes('socket hang up');
+          error.message?.includes('socket hang up') ||
+          error.message?.includes('Proxy connection');
 
         // 网络错误时进行轮询级别的重试，而不是直接中断整个流程
         if (isRetryableError && this.pollCount < this.options.maxPollCount) {
