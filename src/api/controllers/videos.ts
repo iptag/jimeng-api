@@ -12,7 +12,8 @@ import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
 import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_ASSISTANT_ID_SG, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, DRAFT_VERSION_OMNI, OMNI_BENEFIT_TYPE, VIDEO_MODEL_MAP, VIDEO_MODEL_MAP_US, VIDEO_MODEL_MAP_ASIA } from "@/api/consts/common.ts";
 import { uploadImageBuffer } from "@/lib/image-uploader.ts";
 import { uploadVideoBuffer, VideoUploadResult } from "@/lib/video-uploader.ts";
-import { extractVideoUrl } from "@/lib/image-utils.ts";
+import { extractVideoUrl, fetchHighQualityVideoUrl } from "@/lib/image-utils.ts";
+import { uploadVideoFromUrl } from "@/lib/video-uploader.ts";
 
 export const DEFAULT_MODEL = DEFAULT_VIDEO_MODEL;
 
@@ -161,6 +162,8 @@ export async function generateVideo(
     duration = 5,
     filePaths = [],
     files = {},
+    imageUrls = {},
+    videoUrl,
     functionMode = "first_last_frames",
   }: {
     ratio?: string;
@@ -168,6 +171,8 @@ export async function generateVideo(
     duration?: number;
     filePaths?: string[];
     files?: any;
+    imageUrls?: Record<string, string>;
+    videoUrl?: string;
     functionMode?: string;
   },
   refreshToken: string
@@ -251,12 +256,6 @@ export async function generateVideo(
       `omni_reference 模式仅支持 jimeng-video-seedance-2.0 模型`);
   }
 
-  // omni_reference 模式下不支持 URL 方式
-  if (isOmniMode && filePaths && filePaths.length > 0) {
-    throw new APIException(EX.API_REQUEST_FAILED,
-      `omni_reference 模式不支持 file_paths/filePaths URL 参数，请通过 multipart 上传文件 (image_file_1, image_file_2, video_file)`);
-  }
-
   let requestData: any;
 
   if (isOmniMode) {
@@ -268,9 +267,11 @@ export async function generateVideo(
     const imageFile2 = files?.image_file_2;
     const videoFile = files?.video_file;
 
-    if (!imageFile1 && !imageFile2 && !videoFile) {
+    const hasImageUrls = imageUrls && (imageUrls.image_file_1 || imageUrls.image_file_2);
+
+    if (!imageFile1 && !imageFile2 && !videoFile && (!filePaths || filePaths.length === 0) && !hasImageUrls && !videoUrl) {
       throw new APIException(EX.API_REQUEST_FAILED,
-        `omni_reference 模式需要至少上传一个素材文件 (image_file_1, image_file_2, video_file)`);
+        `omni_reference 模式需要至少上传一个素材文件 (image_file_1, image_file_2, video_file) 或提供素材URL`);
     }
 
     // 素材注册表: fieldName → { idx, type, uploadResult }
@@ -325,6 +326,50 @@ export async function generateVideo(
       }
     }
 
+    // 通过 body 中的 URL 字段补充未被 multipart 占用的图片槽位
+    // 支持 curl -F "image_file_1=https://..." 方式（无 @ 前缀，作为文本字段传入）
+    if (imageUrls) {
+      for (const [fieldName, url] of Object.entries(imageUrls)) {
+        if (!url || materialRegistry.has(fieldName)) continue; // 已被 multipart 占用则跳过
+        try {
+          logger.info(`[omni] 从body URL上传 ${fieldName}: ${url}`);
+          const uri = await uploadImageFromUrl(url, refreshToken, regionInfo);
+          await checkImageContent(uri, refreshToken, regionInfo);
+          const entry: MaterialEntry = { idx: materialIdx++, type: "image", fieldName, originalFilename: url, imageUri: uri };
+          materialRegistry.set(fieldName, entry);
+          logger.info(`[omni] ${fieldName} body URL上传成功: ${uri}`);
+        } catch (error: any) {
+          throw new APIException(EX.API_REQUEST_FAILED, `${fieldName} URL图片处理失败: ${error.message}`);
+        }
+      }
+    }
+
+    // 通过 filePaths 数组补充未被 multipart/imageUrls 占用的图片槽位
+    if (filePaths && filePaths.length > 0) {
+      const urlSlots: { fieldName: string; url: string }[] = [];
+      const slot1Taken = materialRegistry.has("image_file_1");
+      const slot2Taken = materialRegistry.has("image_file_2");
+      if (!slot1Taken && filePaths[0]) {
+        urlSlots.push({ fieldName: "image_file_1", url: filePaths[0] });
+      }
+      if (!slot2Taken && filePaths[slot1Taken ? 0 : 1]) {
+        urlSlots.push({ fieldName: "image_file_2", url: filePaths[slot1Taken ? 0 : 1] });
+      }
+
+      for (const slot of urlSlots) {
+        try {
+          logger.info(`[omni] 从URL上传 ${slot.fieldName}: ${slot.url}`);
+          const uri = await uploadImageFromUrl(slot.url, refreshToken, regionInfo);
+          await checkImageContent(uri, refreshToken, regionInfo);
+          const entry: MaterialEntry = { idx: materialIdx++, type: "image", fieldName: slot.fieldName, originalFilename: slot.url, imageUri: uri };
+          materialRegistry.set(slot.fieldName, entry);
+          logger.info(`[omni] ${slot.fieldName} URL上传成功: ${uri}`);
+        } catch (error: any) {
+          throw new APIException(EX.API_REQUEST_FAILED, `${slot.fieldName} URL图片处理失败: ${error.message}`);
+        }
+      }
+    }
+
     if (videoFile) {
       try {
         logger.info(`[omni] 上传 video_file: ${videoFile.originalFilename}`);
@@ -336,6 +381,17 @@ export async function generateVideo(
         logger.info(`[omni] video_file 上传成功: vid=${vResult.vid}, ${vResult.videoMeta.width}x${vResult.videoMeta.height}, ${vResult.videoMeta.duration}s`);
       } catch (error: any) {
         throw new APIException(EX.API_REQUEST_FAILED, `video_file 处理失败: ${error.message}`);
+      }
+    } else if (videoUrl && !materialRegistry.has("video_file")) {
+      // 通过 body 中的 URL 字段上传视频（如 curl -F "video_file=https://..."，无 @ 前缀）
+      try {
+        logger.info(`[omni] 从body URL上传 video_file: ${videoUrl}`);
+        const vResult = await uploadVideoFromUrl(videoUrl, refreshToken, regionInfo);
+        const entry: MaterialEntry = { idx: materialIdx++, type: "video", fieldName: "video_file", originalFilename: videoUrl, videoResult: vResult };
+        materialRegistry.set("video_file", entry);
+        logger.info(`[omni] video_file body URL上传成功: vid=${vResult.vid}, ${vResult.videoMeta.width}x${vResult.videoMeta.height}, ${vResult.videoMeta.duration}s`);
+      } catch (error: any) {
+        throw new APIException(EX.API_REQUEST_FAILED, `video_file URL视频处理失败: ${error.message}`);
       }
     }
 
@@ -349,17 +405,19 @@ export async function generateVideo(
     for (const entry of orderedEntries) {
       if (entry.type === "image") {
         material_list.push({
+          type: "",
+          id: util.uuid(),
           material_type: "image",
           image_info: {
+            type: "image",
+            id: util.uuid(),
+            source_from: "upload",
+            platform_type: 1,
+            name: "",
             image_uri: entry.imageUri,
             width: 0,
             height: 0,
             format: "",
-            id: util.uuid(),
-            name: "",
-            platform_type: 1,
-            source_from: "upload",
-            type: "image",
             uri: entry.imageUri,
           },
         });
@@ -367,17 +425,19 @@ export async function generateVideo(
       } else {
         const vm = entry.videoResult!;
         material_list.push({
+          type: "",
+          id: util.uuid(),
           material_type: "video",
           video_info: {
+            type: "video",
+            id: util.uuid(),
+            source_from: "upload",
+            name: "",
             vid: vm.vid,
+            fps: 0,
             width: vm.videoMeta.width,
             height: vm.videoMeta.height,
             duration: Math.round(vm.videoMeta.duration * 1000),
-            format: vm.videoMeta.format,
-            codec: vm.videoMeta.codec,
-            size: vm.videoMeta.size,
-            bitrate: vm.videoMeta.bitrate,
-            uri: vm.uri,
           },
         });
         materialTypes.push(2);
@@ -741,33 +801,6 @@ export async function generateVideo(
       },
     });
 
-    // 尝试直接从响应中提取视频URL
-    const responseStr = JSON.stringify(result);
-    const videoUrlMatch = responseStr.match(/https:\/\/v[0-9]+-artist\.vlabvod\.com\/[^"\s]+/);
-    if (videoUrlMatch && videoUrlMatch[0]) {
-      logger.info(`从API响应中直接提取到视频URL: ${videoUrlMatch[0]}`);
-      // 构造成功状态并返回
-      return {
-        status: {
-          status: 10,
-          itemCount: 1,
-          historyId
-        } as PollingStatus,
-        data: {
-          status: 10,
-          item_list: [{
-            video: {
-              transcoded_video: {
-                origin: {
-                  video_url: videoUrlMatch[0]
-                }
-              }
-            }
-          }]
-        }
-      };
-    }
-
     // 检查响应中是否有该 history_id 的数据
     // 由于 API 存在最终一致性，早期轮询可能暂时获取不到记录，返回处理中状态继续轮询
     if (!result[historyId]) {
@@ -814,15 +847,35 @@ export async function generateVideo(
 
   const item_list = finalHistoryData.item_list || [];
 
-  // 提取视频URL
-  let videoUrl = item_list?.[0] ? extractVideoUrl(item_list[0]) : null;
+  // 尝试通过 get_local_item_list 获取高质量视频下载URL
+  const itemId = item_list?.[0]?.item_id
+    || item_list?.[0]?.id
+    || item_list?.[0]?.local_item_id
+    || item_list?.[0]?.common_attr?.id;
+
+  if (itemId) {
+    try {
+      const hqVideoUrl = await fetchHighQualityVideoUrl(String(itemId), refreshToken);
+      if (hqVideoUrl) {
+        logger.info(`视频生成成功（高质量），URL: ${hqVideoUrl}，总耗时: ${pollingResult.elapsedTime}秒`);
+        return hqVideoUrl;
+      }
+    } catch (error) {
+      logger.warn(`获取高质量视频URL失败，将使用预览URL作为回退: ${error.message}`);
+    }
+  } else {
+    logger.warn(`未能从item_list中提取item_id，将使用预览URL。item_list[0]键: ${item_list?.[0] ? Object.keys(item_list[0]).join(', ') : '无'}`);
+  }
+
+  // 回退：提取预览视频URL
+  let fallbackVideoUrl = item_list?.[0] ? extractVideoUrl(item_list[0]) : null;
 
   // 如果无法获取视频URL，抛出异常
-  if (!videoUrl) {
+  if (!fallbackVideoUrl) {
     logger.error(`未能获取视频URL，item_list: ${JSON.stringify(item_list)}`);
     throw new APIException(EX.API_IMAGE_GENERATION_FAILED, "未能获取视频URL，请稍后查看");
   }
 
-  logger.info(`视频生成成功，URL: ${videoUrl}，总耗时: ${pollingResult.elapsedTime}秒`);
-  return videoUrl;
+  logger.info(`视频生成成功，URL: ${fallbackVideoUrl}，总耗时: ${pollingResult.elapsedTime}秒`);
+  return fallbackVideoUrl;
 }

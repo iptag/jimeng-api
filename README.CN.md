@@ -442,7 +442,7 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 - `[file]` (file, 可选): 通过 `multipart/form-data` 方式上传的本地图片文件（最多2个），用于指定视频的**首帧**和**尾帧**。字段名可以任意，例如 `image1`。
 - `functionMode` (string, 可选): 生成模式。默认为 `"first_last_frames"`。支持的值：
   - `"first_last_frames"`（默认）：标准模式，根据图片数量自动判断文生视频/图生视频/首尾帧模式。
-  - `"omni_reference"`：全能模式。需要 `jimeng-video-seedance-2.0` 模型。通过指定字段名上传文件：`image_file_1`、`image_file_2`（图片）、`video_file`（视频）。在 prompt 中使用 `@字段名` 引用素材。
+  - `"omni_reference"`：全能模式。需要 `jimeng-video-seedance-2.0` 模型。通过指定字段名上传文件：`image_file_1`、`image_file_2`（图片）、`video_file`（视频），支持本地文件和网络URL。在 prompt 中使用 `@字段名` 引用素材。
 - `response_format` (string, 可选): 响应格式，支持 `url` (默认) 或 `b64_json`。
 
 > **图片输入说明**:
@@ -453,9 +453,17 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 
 > **全能模式 (Omni Reference)**（新）:
 > - 需要 `functionMode=omni_reference` 且 `model=jimeng-video-seedance-2.0`。
-> - 通过 `multipart/form-data` 上传文件，字段名必须为：`image_file_1`（图片）、`image_file_2`（图片）、`video_file`（视频）。至少上传1个文件，最多3个。
-> - 在 `prompt` 中使用 `@字段名`（如 `@image_file_1`、`@video_file`）或 `@原始文件名` 引用上传的素材，描述每个素材的作用。
-> - 全能模式**不支持** URL 方式输入文件（`file_paths`/`filePaths`），必须直接上传文件。
+> - **图片输入**支持三种方式（优先级从高到低）：
+>   1. **本地文件上传**：通过 `multipart/form-data`，字段名为 `image_file_1`、`image_file_2`（如 curl `-F "image_file_1=@local.jpg"`）
+>   2. **表单字段传入 URL**：同样的字段名，值为 URL 字符串而非文件（如 curl `-F "image_file_1=https://..."`，无 `@` 前缀）。服务端会先下载图片再上传。
+>   3. **`file_paths`/`filePaths` 数组**：在 JSON body 中传入 URL 数组，按顺序映射到 `image_file_1`/`image_file_2` 槽位。
+> - 三种方式可以**自由混搭**——每个槽位由优先级最高的来源填充。
+> - **视频输入**支持两种方式（优先级从高到低）：
+>   1. **本地文件上传**：通过 `multipart/form-data`，字段名为 `video_file`（如 curl `-F "video_file=@local.mp4"`）
+>   2. **表单字段传入 URL**：同样的字段名，值为 URL 字符串而非文件（如 curl `-F "video_file=https://..."`，无 `@` 前缀）。服务端会先下载视频再上传。
+> - 至少提供1个素材（图片或视频），最多3个文件（2图片 + 1视频）。
+> - 在 `prompt` 中使用 `@字段名`（如 `@image_file_1`、`@video_file`）或 `@原始文件名` 引用素材，描述每个素材的作用。
+> - **注意**：使用 curl `-F` 参数时，prompt 值中的 `@` 符号会被解释为文件引用。请使用 `--form-string` 代替 `-F` 来发送 prompt 字段。
 > - Prompt 示例：`"@image_file_1作为首帧，@image_file_2作为尾帧，运动动作模仿@video_file"`
 
 **支持的视频模型**:
@@ -518,11 +526,12 @@ curl -X POST http://localhost:5100/v1/videos/generations \
     "filePaths": ["https://example.com/your-image.jpg"]
   }'
 
-# 示例5: 全能模式 (Omni Reference) - 混合图片+视频素材
+# 示例5: 全能模式 - 全部本地文件
 # 需要 jimeng-video-seedance-2.0 模型
+# 注意: prompt 中包含 @ 引用时，使用 --form-string 代替 -F（curl -F 会将 @ 解释为文件）
 curl -X POST http://localhost:5100/v1/videos/generations \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -F "prompt=@image_file_1作为首帧，@image_file_2作为尾帧，运动动作模仿@video_file" \
+  --form-string "prompt=@image_file_1作为首帧，@image_file_2作为尾帧，运动动作模仿@video_file" \
   -F "model=jimeng-video-seedance-2.0" \
   -F "functionMode=omni_reference" \
   -F "ratio=16:9" \
@@ -530,6 +539,32 @@ curl -X POST http://localhost:5100/v1/videos/generations \
   -F "image_file_1=@/path/to/first.png" \
   -F "image_file_2=@/path/to/second.png" \
   -F "video_file=@/path/to/reference-video.mp4"
+
+# 示例6: 全能模式 - 网络图片URL + 本地视频混合
+# image_file_1/image_file_2 使用URL（无 @ 前缀），video_file 使用本地文件（有 @ 前缀）
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  --form-string "prompt=@image_file_1作为首帧，@image_file_2作为尾帧，运动动作模仿@video_file" \
+  -F "model=jimeng-video-seedance-2.0" \
+  -F "functionMode=omni_reference" \
+  -F "ratio=16:9" \
+  -F "duration=5" \
+  -F "image_file_1=https://example.com/first.jpg" \
+  -F "image_file_2=https://example.com/second.jpg" \
+  -F "video_file=@/path/to/reference-video.mp4"
+
+# 示例7: 全能模式 - 全部素材使用网络URL（无需本地文件）
+# image_file_1/image_file_2/video_file 均使用URL（无 @ 前缀）
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  --form-string "prompt=@image_file_1作为首帧，@image_file_2作为尾帧，运动动作模仿@video_file" \
+  -F "model=jimeng-video-seedance-2.0" \
+  -F "functionMode=omni_reference" \
+  -F "ratio=16:9" \
+  -F "duration=5" \
+  -F "image_file_1=https://example.com/first.jpg" \
+  -F "image_file_2=https://example.com/second.jpg" \
+  -F "video_file=https://example.com/reference-video.mp4"
 
 ```
 

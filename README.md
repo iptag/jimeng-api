@@ -421,7 +421,7 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 - `[file]` (file, optional): Local image files uploaded via `multipart/form-data` (up to 2) to specify the **start frame** and **end frame**. The field name can be arbitrary, e.g., `image1`.
 - `functionMode` (string, optional): Generation mode. Defaults to `"first_last_frames"`. Supported values:
   - `"first_last_frames"` (default): Standard mode, auto-detects text-to-video / image-to-video / first-last-frame based on image count.
-  - `"omni_reference"`: Omni Reference mode. Requires `jimeng-video-seedance-2.0` model. Upload files with specific field names: `image_file_1`, `image_file_2` (images), `video_file` (video). Use `@field_name` in the prompt to reference materials.
+  - `"omni_reference"`: Omni Reference mode. Requires `jimeng-video-seedance-2.0` model. Upload files with specific field names: `image_file_1`, `image_file_2` (images), `video_file` (video). Both local files and URLs are supported. Use `@field_name` in the prompt to reference materials.
 - `response_format` (string, optional): Response format, supports `url` (default) or `b64_json`.
 
 > **Image Input Description**:
@@ -432,9 +432,17 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 
 > **Omni Reference Mode** (New):
 > - Requires `functionMode=omni_reference` and `model=jimeng-video-seedance-2.0`.
-> - Upload files via `multipart/form-data` with specific field names: `image_file_1` (image), `image_file_2` (image), `video_file` (video). At least 1 file is required, up to 3 files.
-> - In the `prompt`, use `@field_name` (e.g., `@image_file_1`, `@video_file`) or `@original_filename` to reference uploaded materials and describe their roles.
-> - URL-based file input (`file_paths`/`filePaths`) is **not supported** in omni mode — files must be uploaded directly.
+> - **Image inputs** support three methods (priority from high to low):
+>   1. **Local file upload**: `multipart/form-data` with field names `image_file_1`, `image_file_2` (e.g., curl `-F "image_file_1=@local.jpg"`)
+>   2. **URL in form field**: Same field names but with a URL string instead of a file (e.g., curl `-F "image_file_1=https://..."`, no `@` prefix). The server downloads the image first, then uploads it.
+>   3. **`file_paths`/`filePaths` array**: URL array in JSON body, mapped to `image_file_1`/`image_file_2` slots in order.
+> - All three methods can be **mixed freely** — each slot is filled by the highest-priority source available.
+> - **Video input** supports two methods (priority from high to low):
+>   1. **Local file upload**: `multipart/form-data` with field name `video_file` (e.g., curl `-F "video_file=@local.mp4"`)
+>   2. **URL in form field**: Same field name but with a URL string instead of a file (e.g., curl `-F "video_file=https://..."`, no `@` prefix). The server downloads the video first, then uploads it.
+> - At least 1 material (image or video) is required, up to 3 files (2 images + 1 video).
+> - In the `prompt`, use `@field_name` (e.g., `@image_file_1`, `@video_file`) or `@original_filename` to reference materials and describe their roles.
+> - **Note**: When using curl `-F`, the `@` symbol in `prompt` values is interpreted as a file reference. Use `--form-string` for the prompt field instead.
 > - Example prompt: `"@image_file_1 as first frame, @image_file_2 as last frame, mimic motion from @video_file"`
 
 **Supported Video Models**:
@@ -487,11 +495,12 @@ curl -X POST http://localhost:5100/v1/videos/generations \
   -d \
     "{\"model\": \"jimeng-video-3.0\", \"prompt\": \"A woman dancing in a garden\", \"ratio\": \"4:3\", \"duration\": 10, \"filePaths\": [\"https://example.com/your-image.jpg\"]}"
 
-# Example 5: Omni Reference mode (mixed image + video inputs)
+# Example 5: Omni Reference mode - all local files
 # Requires jimeng-video-seedance-2.0 model
+# Note: Use --form-string for prompt containing @ references (curl -F interprets @ as file)
 curl -X POST http://localhost:5100/v1/videos/generations \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
-  -F "prompt=@image_file_1 as first frame, @image_file_2 as last frame, mimic motion from @video_file" \
+  --form-string "prompt=@image_file_1 as first frame, @image_file_2 as last frame, mimic motion from @video_file" \
   -F "model=jimeng-video-seedance-2.0" \
   -F "functionMode=omni_reference" \
   -F "ratio=16:9" \
@@ -499,6 +508,38 @@ curl -X POST http://localhost:5100/v1/videos/generations \
   -F "image_file_1=@/path/to/first.png" \
   -F "image_file_2=@/path/to/second.png" \
   -F "video_file=@/path/to/reference-video.mp4"
+
+# Example 6: Omni Reference mode - mix URL images + local video
+# image_file_1/image_file_2 use URLs (no @ prefix), video_file uses local file (with @ prefix)
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  --form-string "prompt=@image_file_1 as first frame, @image_file_2 as last frame, mimic motion from @video_file" \
+  -F "model=jimeng-video-seedance-2.0" \
+  -F "functionMode=omni_reference" \
+  -F "ratio=16:9" \
+  -F "duration=5" \
+  -F "image_file_1=https://example.com/first.jpg" \
+  -F "image_file_2=https://example.com/second.jpg" \
+  -F "video_file=@/path/to/reference-video.mp4"
+
+# Example 7: Omni Reference mode - URL images via JSON body (filePaths array)
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  -d "{\"model\": \"jimeng-video-seedance-2.0\", \"prompt\": \"@image_file_1 as first frame, @image_file_2 as last frame\", \"functionMode\": \"omni_reference\", \"ratio\": \"16:9\", \"duration\": 5, \"filePaths\": [\"https://example.com/first.jpg\", \"https://example.com/second.jpg\"]}"
+
+# Example 8: Omni Reference mode - all materials via URL (no local files needed)
+# image_file_1/image_file_2/video_file all use URLs (no @ prefix)
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  --form-string "prompt=@image_file_1 as first frame, @image_file_2 as last frame, mimic motion from @video_file" \
+  -F "model=jimeng-video-seedance-2.0" \
+  -F "functionMode=omni_reference" \
+  -F "ratio=16:9" \
+  -F "duration=5" \
+  -F "image_file_1=https://example.com/first.jpg" \
+  -F "image_file_2=https://example.com/second.jpg" \
+  -F "video_file=https://example.com/reference-video.mp4"
 
 ```
 

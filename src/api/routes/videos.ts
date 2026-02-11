@@ -51,8 +51,21 @@ export default {
                 throw new Error(isOmniMode ? '全能模式最多上传3个文件(2图片+1视频)' : '最多只能上传2个图片文件');
             }
             // omni_reference 模式至少需要上传1个素材文件
-            if (isOmniMode && uploadedFiles.length === 0) {
-                throw new Error('全能模式(omni_reference)至少需要上传1个素材文件(图片或视频)');
+            const hasFilePaths = (request.body.filePaths?.length > 0) || (request.body.file_paths?.length > 0);
+            // 检测 body 中以 URL 字符串形式传入的素材字段（如 -F "image_file_1=https://..."）
+            const imageUrls: Record<string, string> = {};
+            if (typeof request.body.image_file_1 === 'string' && request.body.image_file_1.startsWith('http')) {
+                imageUrls.image_file_1 = request.body.image_file_1;
+            }
+            if (typeof request.body.image_file_2 === 'string' && request.body.image_file_2.startsWith('http')) {
+                imageUrls.image_file_2 = request.body.image_file_2;
+            }
+            const hasImageUrls = Object.keys(imageUrls).length > 0;
+            // 检测 body 中以 URL 字符串形式传入的视频字段
+            const videoUrl = (typeof request.body.video_file === 'string' && request.body.video_file.startsWith('http'))
+                ? request.body.video_file : undefined;
+            if (isOmniMode && uploadedFiles.length === 0 && !hasFilePaths && !hasImageUrls && !videoUrl) {
+                throw new Error('全能模式(omni_reference)至少需要上传1个素材文件(图片或视频)或提供素材URL');
             }
 
             // refresh_token切分
@@ -80,7 +93,7 @@ export default {
             const finalFilePaths = filePaths.length > 0 ? filePaths : file_paths;
 
             // 生成视频
-            const videoUrl = await generateVideo(
+            const generatedVideoUrl = await generateVideo(
                 model,
                 prompt,
                 {
@@ -89,6 +102,8 @@ export default {
                     duration: finalDuration,
                     filePaths: finalFilePaths,
                     files: request.files, // 传递上传的文件
+                    imageUrls,            // 传递 body 中的 URL 图片字段
+                    videoUrl,             // 传递 body 中的 URL 视频字段
                     functionMode,
                 },
                 token
@@ -97,7 +112,7 @@ export default {
             // 根据response_format返回不同格式的结果
             if (response_format === "b64_json") {
                 // 获取视频内容并转换为BASE64
-                const videoBase64 = await util.fetchFileBASE64(videoUrl);
+                const videoBase64 = await util.fetchFileBASE64(generatedVideoUrl);
                 return {
                     created: util.unixTimestamp(),
                     data: [{
@@ -110,7 +125,7 @@ export default {
                 return {
                     created: util.unixTimestamp(),
                     data: [{
-                        url: videoUrl,
+                        url: generatedVideoUrl,
                         revised_prompt: prompt
                     }]
                 };
