@@ -12,7 +12,8 @@ export function createSignature(
   secretAccessKey: string,
   sessionToken?: string,
   payload: string = '',
-  region: string = 'cn-north-1'
+  region: string = 'cn-north-1',
+  service: string = 'imagex'
 ) {
   const urlObj = new URL(url);
   const pathname = urlObj.pathname || '/';
@@ -21,7 +22,6 @@ export function createSignature(
   // 创建规范请求
   const timestamp = headers['x-amz-date'];
   const date = timestamp.substr(0, 8);
-  const service = 'imagex';
   
   // 规范化查询参数
   const queryParams: Array<[string, string]> = [];

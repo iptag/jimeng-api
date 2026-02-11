@@ -425,6 +425,64 @@ export async function request(
   }
  }
 
+/**
+ * 检测上传图片内容合规性（仅国内站）
+ * 调用 algo_proxy 接口进行图片安全检测，不通过则抛出异常
+ *
+ * @param imageUri 已上传图片的 URI
+ * @param refreshToken 刷新令牌
+ * @param regionInfo 区域信息
+ */
+export async function checkImageContent(
+  imageUri: string,
+  refreshToken: string,
+  regionInfo: RegionInfo
+): Promise<void> {
+  // 仅国内站需要内容检测
+  if (regionInfo.isInternational) return;
+
+  const babiParam = JSON.stringify({
+    scenario: "image_video_generation",
+    feature_key: "aigc_to_image",
+    feature_entrance: "to-generate",
+    feature_entrance_detail: "to-generate-algo_proxy",
+  });
+
+  logger.info(`开始图片内容安全检测: ${imageUri}`);
+
+  try {
+    await request("post", "/mweb/v1/algo_proxy", refreshToken, {
+      params: {
+        babi_param: babiParam,
+      },
+      data: {
+        scene: "image_face_ip",
+        options: { ip_check: true },
+        req_key: "benchmark_test_user_upload_image_input",
+        file_list: [{ file_uri: imageUri }],
+        req_params: {},
+      },
+    });
+    logger.info(`图片内容安全检测通过: ${imageUri}`);
+  } catch (error: any) {
+    // 区分内容违规(ret=2003等) vs 网络/服务异常
+    const isContentViolation = error.message && (
+      error.message.includes('2003') ||
+      error.message.includes('risk not pass') ||
+      error.message.includes('detected risk')
+    );
+    if (isContentViolation) {
+      logger.error(`图片内容安全检测未通过: ${imageUri}, ${error.message}`);
+      throw new APIException(
+        EX.API_REQUEST_FAILED,
+        `图片内容检测未通过，该图片可能包含违规内容`
+      );
+    }
+    // 网络/服务异常不阻塞，仅记录警告
+    logger.warn(`图片内容安全检测服务异常(不阻塞): ${imageUri}, ${error.message}`);
+  }
+}
+
  /**
   * 预检查文件URL有效性
   *

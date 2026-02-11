@@ -37,13 +37,22 @@ export default {
                 // 限制图片URL数量最多2个
                 .validate('body.file_paths', v => _.isUndefined(v) || (_.isArray(v) && v.length <= 2))
                 .validate('body.filePaths', v => _.isUndefined(v) || (_.isArray(v) && v.length <= 2))
+                .validate('body.functionMode', v => _.isUndefined(v) || (_.isString(v) && ['first_last_frames', 'omni_reference'].includes(v)))
                 .validate('body.response_format', v => _.isUndefined(v) || _.isString(v))
                 .validate('headers.authorization', _.isString);
 
-            // 限制上传文件数量最多2个
+            const functionMode = request.body.functionMode || 'first_last_frames';
+            const isOmniMode = functionMode === 'omni_reference';
+
+            // omni_reference 模式最多3个文件 (2图片+1视频)，普通模式最多2个
             const uploadedFiles = request.files ? _.values(request.files) : [];
-            if (uploadedFiles.length > 2) {
-                throw new Error('最多只能上传2个图片文件');
+            const maxFiles = isOmniMode ? 3 : 2;
+            if (uploadedFiles.length > maxFiles) {
+                throw new Error(isOmniMode ? '全能模式最多上传3个文件(2图片+1视频)' : '最多只能上传2个图片文件');
+            }
+            // omni_reference 模式至少需要上传1个素材文件
+            if (isOmniMode && uploadedFiles.length === 0) {
+                throw new Error('全能模式(omni_reference)至少需要上传1个素材文件(图片或视频)');
             }
 
             // refresh_token切分
@@ -80,6 +89,7 @@ export default {
                     duration: finalDuration,
                     filePaths: finalFilePaths,
                     files: request.files, // 传递上传的文件
+                    functionMode,
                 },
                 token
             );

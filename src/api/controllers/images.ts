@@ -3,7 +3,7 @@ import _ from "lodash";
 import APIException from "@/lib/exceptions/APIException.ts";
 import EX from "@/api/consts/exceptions.ts";
 import util from "@/lib/util.ts";
-import { getCredit, receiveCredit, request, parseRegionFromToken, getAssistantId, RegionInfo } from "./core.ts";
+import { getCredit, receiveCredit, request, parseRegionFromToken, getAssistantId, checkImageContent, RegionInfo } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
 import { DEFAULT_IMAGE_MODEL, DEFAULT_IMAGE_MODEL_US, IMAGE_MODEL_MAP, IMAGE_MODEL_MAP_US, IMAGE_MODEL_MAP_ASIA } from "@/api/consts/common.ts";
@@ -137,6 +137,7 @@ export async function generateImageComposition(
         imageId = await uploadImageBuffer(image, refreshToken, regionInfo);
       }
       uploadedImageIds.push(imageId);
+      await checkImageContent(imageId, refreshToken, regionInfo);
       logger.info(`图片 ${i + 1}/${imageCount} 上传成功: ${imageId}`);
     } catch (error) {
       logger.error(`图片 ${i + 1}/${imageCount} 上传失败: ${error.message}`);

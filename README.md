@@ -393,16 +393,18 @@ A: Yes—direct local file upload is supported. See the "Local single file uploa
 
 **POST** `/v1/videos/generations`
 
-Generate a video from a text prompt (Text-to-Video) or from start/end frame images (Image-to-Video). Supports three generation modes:
+Generate a video from a text prompt (Text-to-Video) or from start/end frame images (Image-to-Video). Supports four generation modes:
 
 1. **Text-to-Video**: Pure text prompt without any images
 2. **Image-to-Video**: Single image as the first frame
 3. **First-Last Frame**: Two images as the first and last frames
+4. **Omni Reference** (New): Mixed image + video inputs as reference materials, with `@field_name` references in the prompt to describe each material's role. Only supported by `jimeng-video-seedance-2.0`.
 
 > **Mode Detection**: The system automatically determines the generation mode based on the presence of images:
 > - **No images** → Text-to-Video mode
 > - **1 image** → Image-to-Video mode (only first_frame_image is provided)
 > - **2 images** → First-Last Frame mode (both first_frame_image and end_frame_image are provided)
+> - **`functionMode=omni_reference`** → Omni Reference mode (requires explicit parameter)
 
 **Request Parameters**:
 - `model` (string): The name of the video model to use.
@@ -417,6 +419,9 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
   - Other models: `5` (default), `10`
 - `file_paths` (array, optional): An array of image URLs to specify the **start frame** (1st element) and **end frame** (2nd element) of the video.
 - `[file]` (file, optional): Local image files uploaded via `multipart/form-data` (up to 2) to specify the **start frame** and **end frame**. The field name can be arbitrary, e.g., `image1`.
+- `functionMode` (string, optional): Generation mode. Defaults to `"first_last_frames"`. Supported values:
+  - `"first_last_frames"` (default): Standard mode, auto-detects text-to-video / image-to-video / first-last-frame based on image count.
+  - `"omni_reference"`: Omni Reference mode. Requires `jimeng-video-seedance-2.0` model. Upload files with specific field names: `image_file_1`, `image_file_2` (images), `video_file` (video). Use `@field_name` in the prompt to reference materials.
 - `response_format` (string, optional): Response format, supports `url` (default) or `b64_json`.
 
 > **Image Input Description**:
@@ -425,8 +430,15 @@ Generate a video from a text prompt (Text-to-Video) or from start/end frame imag
 > - Up to 2 images are supported, the 1st as the start frame, the 2nd as the end frame.
 > - **Important**: Once image input is provided (image-to-video or first-last frame video), the `ratio` parameter will be ignored, and the video aspect ratio will be determined by the input image's actual ratio. The `resolution` parameter remains effective.
 
+> **Omni Reference Mode** (New):
+> - Requires `functionMode=omni_reference` and `model=jimeng-video-seedance-2.0`.
+> - Upload files via `multipart/form-data` with specific field names: `image_file_1` (image), `image_file_2` (image), `video_file` (video). At least 1 file is required, up to 3 files.
+> - In the `prompt`, use `@field_name` (e.g., `@image_file_1`, `@video_file`) or `@original_filename` to reference uploaded materials and describe their roles.
+> - URL-based file input (`file_paths`/`filePaths`) is **not supported** in omni mode — files must be uploaded directly.
+> - Example prompt: `"@image_file_1 as first frame, @image_file_2 as last frame, mimic motion from @video_file"`
+
 **Supported Video Models**:
-- `jimeng-video-seedance-2.0` - Seedance 2.0, China site only, supports 4~15s duration **(Latest)**
+- `jimeng-video-seedance-2.0` - Seedance 2.0, China site only, supports 4~15s duration, supports Omni Reference mode **(Latest)**
 - `jimeng-video-3.5-pro` - Professional Edition v3.5, works on all sites **(Default)**
 - `jimeng-video-veo3` - Veo3 model, Asia international sites only (HK/JP/SG), fixed 8s duration
 - `jimeng-video-veo3.1` - Veo3.1 model, Asia international sites only (HK/JP/SG), fixed 8s duration
@@ -474,6 +486,19 @@ curl -X POST http://localhost:5100/v1/videos/generations \
   -H "Authorization: Bearer YOUR_SESSION_ID" \
   -d \
     "{\"model\": \"jimeng-video-3.0\", \"prompt\": \"A woman dancing in a garden\", \"ratio\": \"4:3\", \"duration\": 10, \"filePaths\": [\"https://example.com/your-image.jpg\"]}"
+
+# Example 5: Omni Reference mode (mixed image + video inputs)
+# Requires jimeng-video-seedance-2.0 model
+curl -X POST http://localhost:5100/v1/videos/generations \
+  -H "Authorization: Bearer YOUR_SESSION_ID" \
+  -F "prompt=@image_file_1 as first frame, @image_file_2 as last frame, mimic motion from @video_file" \
+  -F "model=jimeng-video-seedance-2.0" \
+  -F "functionMode=omni_reference" \
+  -F "ratio=16:9" \
+  -F "duration=5" \
+  -F "image_file_1=@/path/to/first.png" \
+  -F "image_file_2=@/path/to/second.png" \
+  -F "video_file=@/path/to/reference-video.mp4"
 
 ```
 
@@ -672,6 +697,7 @@ jimeng-api/
 │   │   ├── image-uploader.ts     # Image upload utility
 │   │   ├── image-utils.ts        # Image processing utility
 │   │   ├── region-utils.ts       # Region handling utility
+│   │   ├── video-uploader.ts     # Video upload utility (VOD)
 │   │   └── util.ts               # Common utility functions
 │   └── index.ts                  # Entry file
 ├── configs/                      # Configuration files
