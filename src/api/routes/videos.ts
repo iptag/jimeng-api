@@ -60,10 +60,10 @@ export default {
                 } else if (modelName.includes('3.5-pro') || modelName.includes('3.5_pro')) {
                     validDurations = [5, 10, 12];
                     errorMessage = '3.5-pro 模型仅支持 5、10、12 秒时长';
-                } else if (modelName.includes('seedance-2.0') || modelName.includes('40_pro') || modelName.includes('40-pro')) {
-                    // seedance 2.0 支持 4~15 秒任意整数
+                } else if (modelName.includes('seedance-2.0') || modelName.includes('40_pro') || modelName.includes('40-pro') || modelName.includes('seedance-2.0-fast')) {
+                    // seedance 2.0 和 2.0-fast 支持 4~15 秒任意整数
                     if (durationValue < 4 || durationValue > 15) {
-                        throw new Error(`seedance 2.0 模型支持 4~15 秒时长，当前值: ${durationValue}`);
+                        throw new Error(`seedance 2.0/2.0-fast 模型支持 4~15 秒时长，当前值: ${durationValue}`);
                     }
                 } else {
                     // 其他模型支持 5 或 10 秒

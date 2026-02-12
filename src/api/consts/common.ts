@@ -41,6 +41,7 @@ export const DRAFT_VERSION_OMNI = "3.3.9";
 
 // omni_reference 模式专用 benefit_type
 export const OMNI_BENEFIT_TYPE = "dreamina_video_seedance_20_video_add";
+export const OMNI_BENEFIT_TYPE_FAST = "dreamina_seedance_20_fast_with_video";
 
 // 图像模型映射
 export const IMAGE_MODEL_MAP = {
@@ -77,6 +78,7 @@ export const IMAGE_MODEL_MAP_ASIA = {
 // 视频模型映射 - 国内站 (CN)
 export const VIDEO_MODEL_MAP = {
   "jimeng-video-seedance-2.0": "dreamina_seedance_40_pro",
+  "jimeng-video-seedance-2.0-fast": "dreamina_seedance_40",
   "jimeng-video-3.5-pro": "dreamina_ic_generate_video_model_vgfm_3.5_pro",
   "jimeng-video-3.0-pro": "dreamina_ic_generate_video_model_vgfm_3.0_pro",
   "jimeng-video-3.0": "dreamina_ic_generate_video_model_vgfm_3.0",

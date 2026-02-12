@@ -473,6 +473,7 @@ A: 可以。现在支持直接上传本地文件。请参考上方的“本地�
 
 **支持的视频模型**:
 - `jimeng-video-seedance-2.0` - Seedance 2.0，仅国内站支持，支持4~15秒时长，支持全能模式 (Omni Reference) **（最新）**
+- `jimeng-video-seedance-2.0-fast` - Seedance 2.0 Fast，仅国内站支持，支持4~15秒时长，支持全能模式 (Omni Reference)，速度更快
 - `jimeng-video-3.5-pro` - 专业版v3.5，国内/国际站均支持 **（默认）**
 - `jimeng-video-veo3` - Veo3模型，仅亚洲国际站 (HK/JP/SG) 支持，固定8秒时长
 - `jimeng-video-veo3.1` - Veo3.1模型，仅亚洲国际站 (HK/JP/SG) 支持，固定8秒时长

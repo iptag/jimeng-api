@@ -9,7 +9,7 @@ import util from "@/lib/util.ts";
 import { getCredit, receiveCredit, request, parseRegionFromToken, getAssistantId, checkImageContent, RegionInfo } from "./core.ts";
 import logger from "@/lib/logger.ts";
 import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
-import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_ASSISTANT_ID_SG, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, DRAFT_VERSION_OMNI, OMNI_BENEFIT_TYPE, VIDEO_MODEL_MAP, VIDEO_MODEL_MAP_US, VIDEO_MODEL_MAP_ASIA } from "@/api/consts/common.ts";
+import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_ASSISTANT_ID_SG, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, DRAFT_VERSION_OMNI, OMNI_BENEFIT_TYPE, OMNI_BENEFIT_TYPE_FAST, VIDEO_MODEL_MAP, VIDEO_MODEL_MAP_US, VIDEO_MODEL_MAP_ASIA } from "@/api/consts/common.ts";
 import { uploadImageBuffer } from "@/lib/image-uploader.ts";
 import { uploadVideoBuffer, VideoUploadResult } from "@/lib/video-uploader.ts";
 import { extractVideoUrl, fetchHighQualityVideoUrl } from "@/lib/image-utils.ts";
@@ -47,7 +47,7 @@ function getVideoBenefitType(model: string): string {
     return "dreamina_video_seedance_20_pro";
   }
   if (model.includes("40")) {
-    return "dreamina_video_seedance_20";
+    return "dreamina_video_seedance_20_fast";
   }
   if (model.includes("3.5_pro")) {
     return "dreamina_video_seedance_15_pro";
@@ -186,6 +186,7 @@ export async function generateVideo(
   const isSora2 = model.includes("sora2");
   const is35Pro = model.includes("3.5_pro");
   const is40Pro = model.includes("40_pro");
+  const is40 = model.includes("40") && !model.includes("40_pro");
   // 只有 video-3.0 和 video-3.0-fast 支持 resolution 参数（3.0-pro 和 3.5-pro 不支持）
   const supportsResolution = (model.includes("vgfm_3.0") || model.includes("vgfm_3.0_fast")) && !model.includes("_pro");
 
@@ -193,7 +194,7 @@ export async function generateVideo(
   // veo3 模型固定 8 秒
   // sora2 模型支持 4秒、8秒、12秒，默认4秒
   // 3.5-pro 模型支持 5秒、10秒、12秒，默认5秒
-  // 4.0-pro (seedance 2.0) 模型支持 4~15秒，默认5秒
+  // 4.0-pro (seedance 2.0) 和 4.0 (seedance 2.0-fast) 模型支持 4~15秒，默认5秒
   // 其他模型支持 5秒、10秒，默认5秒
   let durationMs: number;
   let actualDuration: number;
@@ -211,8 +212,8 @@ export async function generateVideo(
       durationMs = 4000;
       actualDuration = 4;
     }
-  } else if (is40Pro) {
-    // seedance 2.0: 支持 4~15 秒，clamp 到有效范围，默认 5 秒
+  } else if (is40Pro || is40) {
+    // seedance 2.0 和 2.0-fast: 支持 4~15 秒，clamp 到有效范围，默认 5 秒
     actualDuration = Math.max(4, Math.min(15, duration));
     durationMs = actualDuration * 1000;
   } else if (is35Pro) {
@@ -248,10 +249,10 @@ export async function generateVideo(
 
   const isOmniMode = functionMode === "omni_reference";
 
-  // omni_reference 仅支持 seedance 2.0 (40_pro) 模型
-  if (isOmniMode && !is40Pro) {
+  // omni_reference 仅支持 seedance 2.0 (40_pro) 和 2.0-fast (40) 模型
+  if (isOmniMode && !is40Pro && !is40) {
     throw new APIException(EX.API_REQUEST_FAILED,
-      `omni_reference 模式仅支持 jimeng-video-seedance-2.0 模型`);
+      `omni_reference 模式仅支持 jimeng-video-seedance-2.0 和 jimeng-video-seedance-2.0-fast 模型`);
   }
 
   let requestData: any;
@@ -531,6 +532,9 @@ export async function generateVideo(
       sceneOptions: JSON.stringify([sceneOption]),
     });
 
+    // 根据模型选择 benefit_type
+    const omniBenefitType = is40 ? OMNI_BENEFIT_TYPE_FAST : OMNI_BENEFIT_TYPE;
+
     requestData = {
       params: {
         aigc_features: "app_lip_sync",
@@ -541,13 +545,13 @@ export async function generateVideo(
         extend: {
           root_model: model,
           m_video_commerce_info: {
-            benefit_type: OMNI_BENEFIT_TYPE,
+            benefit_type: omniBenefitType,
             resource_id: "generate_video",
             resource_id_type: "str",
             resource_sub_type: "aigc",
           },
           m_video_commerce_info_list: [{
-            benefit_type: OMNI_BENEFIT_TYPE,
+            benefit_type: omniBenefitType,
             resource_id: "generate_video",
             resource_id_type: "str",
             resource_sub_type: "aigc",
