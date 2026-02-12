@@ -4,6 +4,10 @@
 
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/) [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/) [![Docker](https://img.shields.io/badge/Docker-支持-blue.svg)](https://www.docker.com/) [![License](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE) [![Telegram](https://img.shields.io/badge/Telegram-群组-blue.svg?logo=telegram)](https://t.me/jimeng_api)
 
+> ⭐ **如果这个项目对你有帮助，请给个 Star 支持一下！** 你的支持是我们持续更新的动力。
+>
+> 🔔 **Watch 本项目**以获取最新功能更新通知。
+>
 > 💬 **加入 Telegram 交流群**: [https://t.me/jimeng_api](https://t.me/jimeng_api) — 问题反馈、使用交流、功能讨论。
 
 ## ✨ 特性
@@ -17,6 +21,10 @@
 - 📊 **详细日志**: 结构化日志记录，便于调试
 - 🐳 **Docker支持**: 容器化部署，开箱即用
 - ⚙️ **日志级别控制**: 可通过配置文件动态调整日志输出级别
+
+## ⭐ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=iptag/jimeng-api&type=Date)](https://star-history.com/#iptag/jimeng-api&Date)
 
 ## ⚠ 风险警告
 
