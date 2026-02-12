@@ -21,22 +21,6 @@ export default {
                 .validate('body.prompt', _.isString)
                 .validate('body.ratio', v => _.isUndefined(v) || _.isString(v))
                 .validate('body.resolution', v => _.isUndefined(v) || _.isString(v))
-                .validate('body.duration', v => {
-                    if (_.isUndefined(v)) return true;
-                    // 支持的时长范围: 4~15 (seedance 2.0 支持任意整数秒)
-                    let num: number;
-                    if (isMultiPart && typeof v === 'string') {
-                        num = parseInt(v);
-                    } else if (_.isFinite(v)) {
-                        num = v as number;
-                    } else {
-                        return false;
-                    }
-                    return Number.isInteger(num) && num >= 4 && num <= 15;
-                })
-                // 限制图片URL数量最多2个
-                .validate('body.file_paths', v => _.isUndefined(v) || (_.isArray(v) && v.length <= 2))
-                .validate('body.filePaths', v => _.isUndefined(v) || (_.isArray(v) && v.length <= 2))
                 .validate('body.functionMode', v => _.isUndefined(v) || (_.isString(v) && ['first_last_frames', 'omni_reference'].includes(v)))
                 .validate('body.response_format', v => _.isUndefined(v) || _.isString(v))
                 .validate('headers.authorization', _.isString);
@@ -44,28 +28,112 @@ export default {
             const functionMode = request.body.functionMode || 'first_last_frames';
             const isOmniMode = functionMode === 'omni_reference';
 
-            // omni_reference 模式最多3个文件 (2图片+1视频)，普通模式最多2个
-            const uploadedFiles = request.files ? _.values(request.files) : [];
-            const maxFiles = isOmniMode ? 3 : 2;
-            if (uploadedFiles.length > maxFiles) {
-                throw new Error(isOmniMode ? '全能模式最多上传3个文件(2图片+1视频)' : '最多只能上传2个图片文件');
+            // 验证 duration（根据模型）
+            if (!_.isUndefined(request.body.duration)) {
+                const modelName = request.body.model || DEFAULT_MODEL;
+                let durationValue: number;
+                if (isMultiPart && typeof request.body.duration === 'string') {
+                    durationValue = parseInt(request.body.duration, 10);
+                    // 严格检查 parseInt 结果
+                    if (!Number.isInteger(durationValue) || request.body.duration.trim() !== String(durationValue)) {
+                        throw new Error(`duration 必须是整数，当前值: ${request.body.duration}`);
+                    }
+                } else if (_.isFinite(request.body.duration)) {
+                    durationValue = request.body.duration as number;
+                    if (!Number.isInteger(durationValue)) {
+                        throw new Error(`duration 必须是整数，当前值: ${durationValue}`);
+                    }
+                } else {
+                    throw new Error(`duration 参数格式错误`);
+                }
+
+                // 根据模型验证 duration 有效值
+                let validDurations: number[] = [];
+                let errorMessage = '';
+
+                if (modelName.includes('veo3.1') || modelName.includes('veo3')) {
+                    validDurations = [8];
+                    errorMessage = 'veo3 模型仅支持 8 秒时长';
+                } else if (modelName.includes('sora2')) {
+                    validDurations = [4, 8, 12];
+                    errorMessage = 'sora2 模型仅支持 4、8、12 秒时长';
+                } else if (modelName.includes('3.5-pro') || modelName.includes('3.5_pro')) {
+                    validDurations = [5, 10, 12];
+                    errorMessage = '3.5-pro 模型仅支持 5、10、12 秒时长';
+                } else if (modelName.includes('seedance-2.0') || modelName.includes('40_pro') || modelName.includes('40-pro')) {
+                    // seedance 2.0 支持 4~15 秒任意整数
+                    if (durationValue < 4 || durationValue > 15) {
+                        throw new Error(`seedance 2.0 模型支持 4~15 秒时长，当前值: ${durationValue}`);
+                    }
+                } else {
+                    // 其他模型支持 5 或 10 秒
+                    validDurations = [5, 10];
+                    errorMessage = '该模型仅支持 5、10 秒时长';
+                }
+
+                // 检查是否在有效值列表中
+                if (validDurations.length > 0 && !validDurations.includes(durationValue)) {
+                    throw new Error(`${errorMessage}，当前值: ${durationValue}`);
+                }
             }
-            // omni_reference 模式至少需要上传1个素材文件
-            const hasFilePaths = (request.body.filePaths?.length > 0) || (request.body.file_paths?.length > 0);
-            // 检测 body 中以 URL 字符串形式传入的素材字段（如 -F "image_file_1=https://..."）
-            const imageUrls: Record<string, string> = {};
-            if (typeof request.body.image_file_1 === 'string' && request.body.image_file_1.startsWith('http')) {
-                imageUrls.image_file_1 = request.body.image_file_1;
-            }
-            if (typeof request.body.image_file_2 === 'string' && request.body.image_file_2.startsWith('http')) {
-                imageUrls.image_file_2 = request.body.image_file_2;
-            }
-            const hasImageUrls = Object.keys(imageUrls).length > 0;
-            // 检测 body 中以 URL 字符串形式传入的视频字段
-            const videoUrl = (typeof request.body.video_file === 'string' && request.body.video_file.startsWith('http'))
-                ? request.body.video_file : undefined;
-            if (isOmniMode && uploadedFiles.length === 0 && !hasFilePaths && !hasImageUrls && !videoUrl) {
-                throw new Error('全能模式(omni_reference)至少需要上传1个素材文件(图片或视频)或提供素材URL');
+
+            // 验证 file_paths 和 filePaths
+            request
+                .validate('body.file_paths', v => _.isUndefined(v) || (_.isArray(v) && v.length <= 2))
+                .validate('body.filePaths', v => _.isUndefined(v) || (_.isArray(v) && v.length <= 2));
+
+            if (isOmniMode) {
+                // 全能模式验证逻辑
+                const uploadedFiles = request.files || {};
+
+                // 统计各类型文件数量
+                let imageCount = 0;
+                let videoCount = 0;
+
+                // 统计上传的文件
+                for (const fieldName of Object.keys(uploadedFiles)) {
+                    if (fieldName.startsWith('image_file_')) imageCount++;
+                    else if (fieldName.startsWith('video_file_')) videoCount++;
+                }
+
+                // 统计URL字段
+                for (let i = 1; i <= 9; i++) {
+                    const fieldName = `image_file_${i}`;
+                    if (typeof request.body[fieldName] === 'string' && request.body[fieldName].startsWith('http')) {
+                        imageCount++;
+                    }
+                }
+                for (let i = 1; i <= 3; i++) {
+                    const fieldName = `video_file_${i}`;
+                    if (typeof request.body[fieldName] === 'string' && request.body[fieldName].startsWith('http')) {
+                        videoCount++;
+                    }
+                }
+
+                // 验证数量限制
+                if (imageCount > 9) {
+                    throw new Error('全能模式最多上传9张图片');
+                }
+                if (videoCount > 3) {
+                    throw new Error('全能模式最多上传3个视频');
+                }
+
+                const totalCount = imageCount + videoCount;
+                if (totalCount > 12) {
+                    throw new Error('全能模式图片+视频总数不超过12个');
+                }
+                if (totalCount === 0) {
+                    const hasFilePaths = (request.body.filePaths?.length > 0) || (request.body.file_paths?.length > 0);
+                    if (!hasFilePaths) {
+                        throw new Error('全能模式至少需要上传1个素材文件(图片或视频)');
+                    }
+                }
+            } else {
+                // 普通模式验证逻辑（保持原有逻辑）
+                const uploadedFiles = request.files ? _.values(request.files) : [];
+                if (uploadedFiles.length > 2) {
+                    throw new Error('最多只能上传2个图片文件');
+                }
             }
 
             // refresh_token切分
@@ -102,8 +170,7 @@ export default {
                     duration: finalDuration,
                     filePaths: finalFilePaths,
                     files: request.files, // 传递上传的文件
-                    imageUrls,            // 传递 body 中的 URL 图片字段
-                    videoUrl,             // 传递 body 中的 URL 视频字段
+                    httpRequest: request, // 传递完整的 request 对象以访问动态字段
                     functionMode,
                 },
                 token
