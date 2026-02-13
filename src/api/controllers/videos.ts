@@ -12,6 +12,7 @@ import { SmartPoller, PollingStatus } from "@/lib/smart-poller.ts";
 import { DEFAULT_ASSISTANT_ID_CN, DEFAULT_ASSISTANT_ID_US, DEFAULT_ASSISTANT_ID_HK, DEFAULT_ASSISTANT_ID_JP, DEFAULT_ASSISTANT_ID_SG, DEFAULT_VIDEO_MODEL, DRAFT_VERSION, DRAFT_VERSION_OMNI, OMNI_BENEFIT_TYPE, OMNI_BENEFIT_TYPE_FAST, VIDEO_MODEL_MAP, VIDEO_MODEL_MAP_US, VIDEO_MODEL_MAP_ASIA } from "@/api/consts/common.ts";
 import { uploadImageBuffer } from "@/lib/image-uploader.ts";
 import { uploadVideoBuffer, VideoUploadResult } from "@/lib/video-uploader.ts";
+import { uploadAudioBuffer, AudioUploadResult, uploadAudioFromUrl } from "@/lib/audio-uploader.ts";
 import { extractVideoUrl, fetchHighQualityVideoUrl } from "@/lib/image-utils.ts";
 import { uploadVideoFromUrl } from "@/lib/video-uploader.ts";
 
@@ -264,11 +265,12 @@ export async function generateVideo(
     // 素材注册表: fieldName → { idx, type, uploadResult }
     interface MaterialEntry {
       idx: number;
-      type: "image" | "video";
+      type: "image" | "video" | "audio";
       fieldName: string;
       originalFilename: string;
       imageUri?: string;
       videoResult?: VideoUploadResult;
+      audioResult?: AudioUploadResult;
     }
     const materialRegistry: Map<string, MaterialEntry> = new Map();
     let materialIdx = 0;
@@ -277,6 +279,7 @@ export async function generateVideo(
     const canonicalKeys = new Set<string>();
     for (let i = 1; i <= 9; i++) canonicalKeys.add(`image_file_${i}`);
     for (let i = 1; i <= 3; i++) canonicalKeys.add(`video_file_${i}`);
+    for (let i = 1; i <= 3; i++) canonicalKeys.add(`audio_file_${i}`);
 
     // 安全注册别名：originalFilename 不与 canonical key 冲突时才注册
     function registerAlias(filename: string, entry: MaterialEntry) {
@@ -288,12 +291,14 @@ export async function generateVideo(
     // 收集所有需要处理的图片和视频字段
     const imageFields: string[] = [];
     const videoFields: string[] = [];
+    const audioFields: string[] = [];
 
     // 检测上传的文件
     if (files) {
       for (const fieldName of Object.keys(files)) {
         if (fieldName.startsWith('image_file_')) imageFields.push(fieldName);
         else if (fieldName.startsWith('video_file_')) videoFields.push(fieldName);
+        else if (fieldName.startsWith('audio_file_')) audioFields.push(fieldName);
       }
     }
 
@@ -310,12 +315,18 @@ export async function generateVideo(
         if (!videoFields.includes(fieldName)) videoFields.push(fieldName);
       }
     }
+    for (let i = 1; i <= 3; i++) {
+      const fieldName = `audio_file_${i}`;
+      if (typeof httpRequest?.body?.[fieldName] === 'string' && httpRequest.body[fieldName].startsWith('http')) {
+        if (!audioFields.includes(fieldName)) audioFields.push(fieldName);
+      }
+    }
 
     // 检查是否有素材
     const hasFilePaths = filePaths && filePaths.length > 0;
-    if (imageFields.length === 0 && videoFields.length === 0 && !hasFilePaths) {
+    if (imageFields.length === 0 && videoFields.length === 0 && audioFields.length === 0 && !hasFilePaths) {
       throw new APIException(EX.API_REQUEST_FAILED,
-        `omni_reference 模式需要至少上传一个素材文件 (image_file_*, video_file_*) 或提供素材URL`);
+        `omni_reference 模式需要至少上传一个素材文件 (image_file_*, video_file_*, audio_file_*) 或提供素材URL`);
     }
 
     let totalVideoDuration = 0; // 累计视频时长
@@ -437,6 +448,48 @@ export async function generateVideo(
       }
     }
 
+    // 串行上传音频素材
+    let totalAudioDuration = 0;
+    for (const fieldName of audioFields) {
+      const audioFile = files?.[fieldName];
+      const audioUrlField = httpRequest?.body?.[fieldName];
+
+      try {
+        logger.info(`[omni] 上传 ${fieldName}`);
+        let aResult: AudioUploadResult;
+
+        if (audioFile) {
+          const buf = await fs.readFile(audioFile.filepath);
+          aResult = await uploadAudioBuffer(buf, refreshToken, regionInfo);
+          totalAudioDuration += aResult.audioMeta.duration;
+          const entry: MaterialEntry = {
+            idx: materialIdx++,
+            type: "audio",
+            fieldName,
+            originalFilename: audioFile.originalFilename,
+            audioResult: aResult
+          };
+          materialRegistry.set(fieldName, entry);
+          registerAlias(audioFile.originalFilename, entry);
+          logger.info(`[omni] ${fieldName} 上传成功: vid=${aResult.vid}, ${aResult.audioMeta.duration}s`);
+        } else if (audioUrlField && typeof audioUrlField === 'string' && audioUrlField.startsWith('http')) {
+          aResult = await uploadAudioFromUrl(audioUrlField, refreshToken, regionInfo);
+          totalAudioDuration += aResult.audioMeta.duration;
+          const entry: MaterialEntry = {
+            idx: materialIdx++,
+            type: "audio",
+            fieldName,
+            originalFilename: audioUrlField,
+            audioResult: aResult
+          };
+          materialRegistry.set(fieldName, entry);
+          logger.info(`[omni] ${fieldName} URL上传成功: vid=${aResult.vid}, ${aResult.audioMeta.duration}s`);
+        }
+      } catch (error: any) {
+        throw new APIException(EX.API_REQUEST_FAILED, `${fieldName} 处理失败: ${error.message}`);
+      }
+    }
+
     // 验证视频总时长
     const MAX_TOTAL_VIDEO_DURATION = 15;
     if (!Number.isFinite(totalVideoDuration)) {
@@ -449,6 +502,16 @@ export async function generateVideo(
     }
 
     logger.info(`[omni] 视频总时长: ${totalVideoDuration.toFixed(2)}s`);
+
+    // 验证音频总时长
+    const MAX_TOTAL_AUDIO_DURATION = 15;
+    if (!Number.isFinite(totalAudioDuration)) {
+      throw new APIException(EX.API_REQUEST_FAILED, `音频时长数据异常，请检查音频文件`);
+    }
+    if (totalAudioDuration > MAX_TOTAL_AUDIO_DURATION) {
+      throw new APIException(EX.API_REQUEST_FAILED,
+        `音频总时长 ${totalAudioDuration.toFixed(2)}s 超过限制 (最大 ${MAX_TOTAL_AUDIO_DURATION}s)`);
+    }
 
     // 构建 material_list（按注册顺序）
     const orderedEntries = [...new Map([...materialRegistry].filter(([k, v]) => k === v.fieldName)).values()]
@@ -477,7 +540,7 @@ export async function generateVideo(
           },
         });
         materialTypes.push(1);
-      } else {
+      } else if (entry.type === "video") {
         const vm = entry.videoResult!;
         material_list.push({
           type: "",
@@ -496,11 +559,33 @@ export async function generateVideo(
           },
         });
         materialTypes.push(2);
+      } else if (entry.type === "audio") {
+        const am = entry.audioResult!;
+        material_list.push({
+          type: "",
+          id: util.uuid(),
+          material_type: "audio",
+          audio_info: {
+            type: "audio",
+            id: util.uuid(),
+            source_from: "upload",
+            vid: am.vid,
+            duration: am.audioMeta.durationMs,
+            name: "",
+          },
+        });
+        materialTypes.push(3);
       }
     }
 
     // 解析 prompt → meta_list
     const meta_list = parseOmniPrompt(prompt, materialRegistry);
+
+    const hasImageOrVideo = materialTypes.some(t => t === 1 || t === 2);
+    if (materialTypes.includes(3) && !hasImageOrVideo) {
+      throw new APIException(EX.API_REQUEST_FAILED,
+        `omni_reference 模式中使用音频素材时，至少需要同时提供一张图片或一段视频`);
+    }
 
     logger.info(`[omni] material_list: ${material_list.length} 项, meta_list: ${meta_list.length} 项, materialTypes: [${materialTypes}]`);
 
