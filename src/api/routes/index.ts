@@ -4,6 +4,7 @@ import ping from "./ping.ts";
 import token from './token.js';
 import models from './models.ts';
 import videos from './videos.ts';
+import asyncTasks from './async-tasks.ts';
 
 export default [
     {
@@ -19,6 +20,11 @@ export default [
                         images: '/v1/images/generations',
                         compositions: '/v1/images/compositions',
                         videos: '/v1/videos/generations',
+                        async_images: '/v1/async/images/generations',
+                        async_compositions: '/v1/async/images/compositions',
+                        async_videos: '/v1/async/videos/generations',
+                        tasks: '/v1/async/tasks',
+                        task_detail: '/v1/async/tasks/:task_id',
                         models: '/v1/models',
                         health: '/ping'
                     }
@@ -30,5 +36,6 @@ export default [
     ping,
     token,
     models,
-    videos
+    videos,
+    asyncTasks
 ];

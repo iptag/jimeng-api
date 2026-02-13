@@ -551,6 +551,43 @@ curl -X POST http://localhost:5100/v1/videos/generations \
 
 ```
 
+### Async Task API
+
+For requests that take a long time to generate (especially videos), it is recommended to use the Async API to avoid connection timeouts. A `task_id` is returned immediately after submission, and you can query the task progress and final results at any time.
+
+> **Built-in Retro Frontend**: Open `http://localhost:5100/index.html` in your browser to experience an out-of-the-box Windows 2000 style async task management interface!
+
+**1. Submit Async Task**
+
+Request parameters are **exactly the same** as the original synchronous API.
+- **POST** `/v1/async/images/generations` (Text-to-Image)
+- **POST** `/v1/async/images/compositions` (Image-to-Image)
+- **POST** `/v1/async/videos/generations` (Video Generation)
+
+**Response Example** (Returns immediately):
+```json
+{
+  "task_id": "a1b2c3d4-...",
+  "status": "pending",
+  "type": "video_generation",
+  "created_at": 1770981920,
+  "poll_url": "/v1/async/tasks/a1b2c3d4-..."
+}
+```
+
+**2. Query Single Task Progress**
+
+- **GET** `/v1/async/tasks/:task_id`
+
+Returns `status` (pending | processing | completed | failed), `progress` (0-100), and `result` or `error`.
+
+**3. List All Tasks**
+
+- **GET** `/v1/async/tasks`
+
+Supports optional query parameter `?status=pending|processing|completed|failed` for filtering.
+Returns `tasks` array and `stats` information.
+
 ### Token API
 
 #### Token Bound Proxy Feature (New)

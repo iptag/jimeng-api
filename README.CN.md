@@ -582,6 +582,43 @@ curl -X POST http://localhost:5100/v1/videos/generations \
 
 ```
 
+### 异步任务 API
+
+对于生成时间较长（特别是视频）的请求，建议使用异步 API 避免连接超时。提交任务后立即返回 `task_id`，你可以随时查询任务进度和最终结果。
+
+> **内置复古前端台**：在浏览器打开 `http://localhost:5100/index.html` 即可体验开箱即用的 Windows 2000 风格异步任务管理界面！
+
+**1. 提交异步任务**
+
+请求参数与原同步接口**完全一致**。
+- **POST** `/v1/async/images/generations` (文生图)
+- **POST** `/v1/async/images/compositions` (图生图)
+- **POST** `/v1/async/videos/generations` (视频生成)
+
+**响应示例**（立即返回）：
+```json
+{
+  "task_id": "a1b2c3d4-...",
+  "status": "pending",
+  "type": "video_generation",
+  "created_at": 1770981920,
+  "poll_url": "/v1/async/tasks/a1b2c3d4-..."
+}
+```
+
+**2. 查询单个任务进度**
+
+- **GET** `/v1/async/tasks/:task_id`
+
+返回包含 `status` (pending | processing | completed | failed)、`progress` (0-100) 以及 `result` 或 `error`。
+
+**3. 列出所有任务**
+
+- **GET** `/v1/async/tasks`
+
+支持可选查询参数 `?status=pending|processing|completed|failed` 进行过滤。
+返回 `tasks` 数组和 `stats` 统计信息。
+
 ### Token API
 
 #### Token 绑定代理功能 (新)
