@@ -226,9 +226,10 @@ export async function generateImageComposition(
   // 轮询结果
   const poller = new SmartPoller({
     maxPollCount: 900,
+    pollInterval: 10000, // 10秒轮询间隔
     expectedItemCount: 1,
     type: 'image',
-    timeoutSeconds: 900 // 15 分钟超时
+    timeoutSeconds: 1800 // 30 分钟超时
   });
 
   const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {
@@ -424,9 +425,10 @@ async function generateImagesInternal(
   // 轮询结果
   const poller = new SmartPoller({
     maxPollCount: 900,
+    pollInterval: 10000, // 10秒轮询间隔
     expectedItemCount: 4,
     type: 'image',
-    timeoutSeconds: 900 // 15 分钟超时
+    timeoutSeconds: 1800 // 30 分钟超时
   });
 
   const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {
@@ -575,9 +577,10 @@ async function generateJimeng4xMultiImages(
   // 轮询结果
   const poller = new SmartPoller({
     maxPollCount: 600,
+    pollInterval: 10000, // 10秒轮询间隔
     expectedItemCount: targetImageCount,
     type: 'image',
-    timeoutSeconds: 900 // 15 分钟超时
+    timeoutSeconds: 1800 // 30 分钟超时
   });
 
   const { result: pollingResult, data: finalTaskInfo } = await poller.poll(async () => {

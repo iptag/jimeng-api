@@ -843,10 +843,10 @@ export async function generateVideo(
 
   const poller = new SmartPoller({
     maxPollCount,
-    pollInterval: 2000, // 2秒基础间隔
+    pollInterval: 20000, // 20秒基础间隔
     expectedItemCount: 1,
     type: 'video',
-    timeoutSeconds: 1200 // 20分钟超时
+    timeoutSeconds: 3600 // 60分钟超时
   });
 
   const { result: pollingResult, data: finalHistoryData } = await poller.poll(async () => {
