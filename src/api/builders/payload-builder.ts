@@ -218,6 +218,7 @@ interface Ability {
 
 export interface BuildMetricsExtraOptions {
   userModel: string;
+  model: string;       // 映射后的内部模型名 (如 high_aes_general_v50)
   regionInfo: RegionInfo;
   submitId: string;
   scene: SceneType;
@@ -231,6 +232,7 @@ export interface BuildMetricsExtraOptions {
  */
 export function buildMetricsExtra({
   userModel,
+  model,
   regionInfo,
   submitId,
   scene,
@@ -243,13 +245,13 @@ export function buildMetricsExtra({
   const sceneOption: any = {
     type: "image",
     scene,
-    modelReqKey: userModel,
+    modelReqKey: model,
     resolutionType,
     abilityList,
     reportParams: {
       enterSource: "generate",
       vipSource: "generate",
-      extraVipFunctionKey: `${userModel}-${resolutionType}`,
+      extraVipFunctionKey: `${model}-${resolutionType}`,
       useVipFunctionDetailsReporterHoc: true,
     },
   };

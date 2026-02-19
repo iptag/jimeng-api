@@ -131,10 +131,10 @@ export async function generateImageComposition(
       let imageId: string;
       if (typeof image === 'string') {
         logger.info(`正在处理第 ${i + 1}/${imageCount} 张图片 (URL)...`);
-        imageId = await uploadImageFromUrl(image, refreshToken, regionInfo);
+        imageId = (await uploadImageFromUrl(image, refreshToken, regionInfo)).uri;
       } else {
         logger.info(`正在处理第 ${i + 1}/${imageCount} 张图片 (Buffer)...`);
-        imageId = await uploadImageBuffer(image, refreshToken, regionInfo);
+        imageId = (await uploadImageBuffer(image, refreshToken, regionInfo)).uri;
       }
       uploadedImageIds.push(imageId);
       await checkImageContent(imageId, refreshToken, regionInfo);
@@ -175,6 +175,7 @@ export async function generateImageComposition(
   // 使用 payload-builder 构建 metrics_extra
   const metricsExtra = buildMetricsExtra({
     userModel,
+    model,
     regionInfo,
     submitId,
     scene: "ImageBasicGenerate",
@@ -210,11 +211,15 @@ export async function generateImageComposition(
     metricsExtra,
   });
 
+  const imageReferer = regionInfo.isCN
+    ? "https://jimeng.jianying.com/ai-tool/generate?type=image"
+    : "https://dreamina.capcut.com/ai-tool/generate?type=image";
+
   const { aigc_data } = await request(
     "post",
     "/mweb/v1/aigc_draft/generate",
     refreshToken,
-    { data: requestData }
+    { data: requestData, headers: { Referer: imageReferer } }
   );
 
   const historyId = aigc_data?.history_record_id;
@@ -388,6 +393,7 @@ async function generateImagesInternal(
   // 使用 payload-builder 构建 metrics_extra
   const metricsExtra = buildMetricsExtra({
     userModel,
+    model,
     regionInfo,
     submitId,
     scene: "ImageBasicGenerate",
@@ -411,11 +417,15 @@ async function generateImagesInternal(
     metricsExtra,
   });
 
+  const imageReferer = regionInfo.isCN
+    ? "https://jimeng.jianying.com/ai-tool/generate?type=image"
+    : "https://dreamina.capcut.com/ai-tool/generate?type=image";
+
   const { aigc_data } = await request(
     "post",
     "/mweb/v1/aigc_draft/generate",
     refreshToken,
-    { data: requestData }
+    { data: requestData, headers: { Referer: imageReferer } }
   );
 
   const historyId = aigc_data?.history_record_id;
@@ -537,6 +547,7 @@ async function generateJimeng4xMultiImages(
   // 使用 payload-builder 构建 metrics_extra (多图模式)
   const metricsExtra = buildMetricsExtra({
     userModel,
+    model,
     regionInfo,
     submitId,
     scene: "ImageMultiGenerate",
@@ -561,11 +572,15 @@ async function generateJimeng4xMultiImages(
     metricsExtra,
   });
 
+  const imageReferer = regionInfo.isCN
+    ? "https://jimeng.jianying.com/ai-tool/generate?type=image"
+    : "https://dreamina.capcut.com/ai-tool/generate?type=image";
+
   const { aigc_data } = await request(
     "post",
     "/mweb/v1/aigc_draft/generate",
     refreshToken,
-    { data: requestData }
+    { data: requestData, headers: { Referer: imageReferer } }
   );
 
   const historyId = aigc_data?.history_record_id;

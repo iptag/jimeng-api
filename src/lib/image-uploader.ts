@@ -12,17 +12,27 @@ import util from "@/lib/util.ts";
  */
 
 /**
+ * 图片上传结果
+ */
+export interface ImageUploadResult {
+  uri: string;
+  width: number;
+  height: number;
+  format: string;
+}
+
+/**
  * 上传图片Buffer到ImageX
  * @param imageBuffer 图片数据
  * @param refreshToken 刷新令牌
  * @param regionInfo 区域信息
- * @returns 图片URI
+ * @returns 图片上传结果（URI + 元信息）
  */
 export async function uploadImageBuffer(
   imageBuffer: ArrayBuffer | Buffer,
   refreshToken: string,
   regionInfo: RegionInfo
-): Promise<string> {
+): Promise<ImageUploadResult> {
   try {
     logger.info(`开始上传图片Buffer... (isInternational: ${regionInfo.isInternational})`);
 
@@ -230,9 +240,16 @@ export async function uploadImageBuffer(
     }
 
     const fullImageUri = uploadResult.Uri;
-    logger.info(`图片上传完成: ${fullImageUri}`);
 
-    return fullImageUri;
+    // 从 PluginResult 提取图片元信息
+    const pluginResult = commitResult.Result?.PluginResult?.[0];
+    const width = pluginResult?.ImageWidth || 0;
+    const height = pluginResult?.ImageHeight || 0;
+    const format = pluginResult?.ImageFormat || "";
+
+    logger.info(`图片上传完成: ${fullImageUri} (${width}x${height}, ${format})`);
+
+    return { uri: fullImageUri, width, height, format };
   } catch (error: any) {
     logger.error(`图片Buffer上传失败: ${error.message}`);
     throw error;
@@ -244,13 +261,13 @@ export async function uploadImageBuffer(
  * @param imageUrl 图片URL
  * @param refreshToken 刷新令牌
  * @param regionInfo 区域信息
- * @returns 图片URI
+ * @returns 图片上传结果（URI + 元信息）
  */
 export async function uploadImageFromUrl(
   imageUrl: string,
   refreshToken: string,
   regionInfo: RegionInfo
-): Promise<string> {
+): Promise<ImageUploadResult> {
   try {
     logger.info(`开始从URL下载并上传图片: ${imageUrl}`);
 

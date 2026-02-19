@@ -7,7 +7,7 @@ import "colors";
 import mime from "mime";
 import axios from "axios";
 import fs from "fs-extra";
-import { v1 as uuid } from "uuid";
+import { v4 as uuid } from "uuid";
 import { format as dateFormat } from "date-fns";
 import CRC32 from "crc-32";
 import randomstring from "randomstring";

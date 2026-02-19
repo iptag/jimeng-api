@@ -38,7 +38,7 @@ const MODEL_NAME = "jimeng";
 const DEVICE_ID = Math.random() * 999999999999999999 + 7000000000000000000;
 // WebID
 const WEB_ID = Math.random() * 999999999999999999 + 7000000000000000000;
-// 用户ID
+// 用户ID（32位hex，无横线）
 const USER_ID = util.uuid(false);
 // 伪装headers
 const FAKE_HEADERS = {
@@ -165,24 +165,15 @@ export function generateCookie(refreshToken: string) {
     ? tokenWithRegion.substring(3)
     : tokenWithRegion;
 
-  let storeRegion = 'cn-gd';
-  if (isUS) storeRegion = 'us';
-  else if (isHK) storeRegion = 'hk';
-  else if (isJP) storeRegion = 'hk'; // JP uses HK store region
-  else if (isSG) storeRegion = 'hk'; // SG uses HK store region
-
   return [
     `_tea_web_id=${WEB_ID}`,
     `is_staff_user=false`,
-    `store-region=${storeRegion}`,
-    `store-region-src=uid`,
     `sid_guard=${token}%7C${util.unixTimestamp()}%7C5184000%7CMon%2C+03-Feb-2025+08%3A17%3A09+GMT`,
     `uid_tt=${USER_ID}`,
     `uid_tt_ss=${USER_ID}`,
     `sid_tt=${token}`,
     `sessionid=${token}`,
     `sessionid_ss=${token}`,
-    `sid_tt=${token}`
   ].join("; ");
 }
 
@@ -312,11 +303,15 @@ export async function request(
     ...FAKE_HEADERS,
     Origin: origin,
     Referer: origin,
+    "App-Sdk-Version": "48.0.0",
     Appid: aid,
     Cookie: generateCookie(tokenWithRegion),
     "Device-Time": deviceTime,
+    Lan: isUS ? "en" : isJP ? "ja" : (isHK || isSG) ? "en" : "zh-Hans",
+    Loc: isUS ? "us" : isJP ? "jp" : isHK ? "hk" : isSG ? "sg" : "cn",
     Sign: sign,
     "Sign-Ver": "1",
+    Tdid: "",
     ...(options.headers || {}),
   };
 
