@@ -37,7 +37,7 @@ const MODEL_NAME = "jimeng";
 // 设备ID
 const DEVICE_ID = Math.random() * 999999999999999999 + 7000000000000000000;
 // WebID
-const WEB_ID = "7604480501676410406";
+const WEB_ID = Math.random() * 999999999999999999 + 7000000000000000000;
 // 用户ID（32位hex，无横线）
 const USER_ID = util.uuid(false);
 // 伪装headers
