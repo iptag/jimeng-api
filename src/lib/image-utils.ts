@@ -46,7 +46,11 @@ export function extractImageUrls(itemList: any[]): string[] {
  * @returns 视频URL或null
  */
 export function extractVideoUrl(item: any): string | null {
-  // 优先尝试 transcoded_video.origin.video_url
+  // 优先尝试 common_attr.transcoded_video (亚太站结构)
+  if (item?.common_attr?.transcoded_video?.origin?.video_url) {
+    return item.common_attr.transcoded_video.origin.video_url;
+  }
+  // 尝试 video.transcoded_video (国内站结构)
   if (item?.video?.transcoded_video?.origin?.video_url) {
     return item.video.transcoded_video.origin.video_url;
   }
@@ -97,6 +101,7 @@ export async function fetchHighQualityVideoUrl(itemId: string, refreshToken: str
     if (itemList.length > 0) {
       const item = itemList[0];
       const videoUrl =
+        item?.common_attr?.transcoded_video?.origin?.video_url ||
         item?.video?.transcoded_video?.origin?.video_url ||
         item?.video?.download_url ||
         item?.video?.play_url ||
